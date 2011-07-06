@@ -21,7 +21,7 @@ function everyfeed_batch_check($product, $category_id, &$context) {
 
   // Do we have some results
   if($data['status'] == 200 && $data['numFound'] > 0) {
-    $context['sandbox']['max'] = $data['numFound'];
+    $context['sandbox']['max'] = 5; // $data['numFound']; //@debug
     $context['sandbox']['product'] = $product;
     $context['sandbox']['category_id'] = $category_id;
     $context['sandbox']['api'] = $product . $category;
@@ -47,7 +47,7 @@ function everyfeed_batch_process($product, $category_id, &$context) {
     everyfeed_batch_check($product, $category_id, $context);
   }
   
-  $limit = 500;
+  $limit = 5; // 500
   
   // Filter the products by category if one is provided
   $category = '';
@@ -56,7 +56,13 @@ function everyfeed_batch_process($product, $category_id, &$context) {
   }
   
   //!@todo make currency configurable
-  $data = everyfeed_callapi('search/' . $product . $category . '/start/' . $context['sandbox']['progress'] . '/rows/' . $limit . '/currency/GBP');
+  $method  = 'search/' . $product . $category . '/start/' . $context['sandbox']['progress'] . '/rows/' . $limit . '/currency/GBP';
+  $url = 'http://api.everyfeed.net/json/' . variable_get('everyfeed_apikey', '') . '/' . $method . '/';
+
+  $result = drupal_http_request($url);
+  $data = drupal_json_decode($result->data); $data = $data['everyFeed'];
+  
+  $context['sandbox']['progress'] += $limit;
 
   if($data['status'] == 200) {
     foreach ($data['products'] as $row) {
@@ -74,6 +80,7 @@ function everyfeed_batch_process($product, $category_id, &$context) {
           'attributes' => array('style' => 'vertical-align: text-top'))
         )
       ));
+      everyfeed_batch_createnode($row);
     }
   }
     
@@ -82,7 +89,6 @@ function everyfeed_batch_process($product, $category_id, &$context) {
   }
   
 }
-
 
 function everyfeed_batch_complete($success, $results, $operations) {
   // The 'success' parameter means no fatal PHP errors were detected. All
@@ -105,5 +111,66 @@ function everyfeed_batch_complete($success, $results, $operations) {
   }
   $_SESSION['my_batch_results'] = $items;
 */
+}
+
+
+/**
+ * Populates a node with product data
+ * 
+ * @access public
+ * @param mixed $data
+ * @return void
+ */
+function everyfeed_batch_createnode($data) {
+    module_load_include('inc', 'node', 'node.pages');
+    
+    global $user;
+    $node = array(
+     'type' => 'ef_product',
+     'language' => 'en', 
+     'created' => strtotime($data['firstseen'])
+    );
+
+    $form_state['values'] = array();
+    $form_state['values']['language'] = $lang = "und"; // substitute for the language of the node
+/*     $form_state['values']['name'] = $user->name; */
+    $form_state['values']['status'] = 1;
+    $form_state['values']['promote'] = 0;
+    $form_state['values']['sticky'] = 0;
+/*     $form_state['values']['created'] = ; */
+    $form_state['values']['op'] = t('Save');
+    
+    $form_state['values']['field_productid']['und'][0]['value'] = $data['product_id'];
+    $form_state['values']['title'] = $data['title'];
+    $form_state['values']['body']['und'][0]['value'] =  $data['description'];    
+    $form_state['values']['field_price']['und'][0]['value'] = $data['price'] / 100;
+    $form_state['values']['field_currency']['und'] = $data['currency'];
+    $form_state['values']['field_buylink']['und'][0]['url'] = $data['url'];
+    
+    //!@todo should we check 'verified_image' is true before using the image?
+    $form_state['values']['field_image']['und'][0] = array(
+      'filefield_remote' => array('url' => $data['image_url']),
+      'title' => $data['title'],
+      'alt' => t('Image of !title', array('!title' => $data['title']))
+    );
+    
+    // Build up a comma seperated list of categories for this product
+    if ($data['category']) {
+      $cats = array();
+      
+      foreach($data['category'] as $term) {
+        $cats[] = $term['name'];
+      }
+      
+      if (count($cats) > 0) {
+        $form_state['values']['field_tags']['und'] = implode(',', $cats);
+      }
+    }
+    
+	watchdog('everyfeed', print_r($data, true), array(), WATCHDOG_DEBUG);
+
+    // Create the node!
+    drupal_form_submit('ef_product_node_form', $form_state, (object) $node);
 
 }
+

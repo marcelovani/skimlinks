@@ -1,7 +1,13 @@
 <?php
 
 //api: 5f847cef199fffa001a443f83f78e313
+/*
+@todo
 
+remove debug
+when editing a node log submitted values structure of ef_product
+update node creation to submit values - mainly to get remote image url
+*/
 
 
 /* variable_set('everyfeed_apikey', '5f847cef199fffa001a443f83f78e313'); */
@@ -123,7 +129,7 @@ function everyfeed_admin_products($form_state) {
   $form['newproductsearch'] = array(
     '#type' => 'textfield',
     '#title' => t('Keyword'),
-    '#size' => 95,
+    '#size' => 65,
     '#required' => true,
     '#prefix' => '<div class="container-inline">',
   );
@@ -245,4 +251,18 @@ function everyfeed_callapi($method) {
   }
   
   return $values;
+}
+
+
+function everyfeed_form_alter(&$form, &$form_state, $form_id)
+{
+  if($form_id == 'ef_product_node_form') {
+  	$form['#submit'][] = 'everyfeed_node_form_submit';
+	}
+}
+
+function everyfeed_node_form_submit($form, &$form_state) 
+{
+	watchdog('everyfeed', print_r($form_state, true), array(), WATCHDOG_DEBUG);
+	dsm('yo ho ho');
 }

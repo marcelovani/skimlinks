@@ -40,4 +40,5 @@ function everyfeed_schema() {
  * Implements hook_install().
  */
 function everyfeed_install() {
+// create a content type http://integersoft.com/tutorials/programming/create-custom-content-type-programmatically-drupal-7
 }
