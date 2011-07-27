@@ -15,5 +15,7 @@ package = "E-Commerce"
 
 
 ; Module dependencies (Drupal 6+ style)
-dependencies[] = ctools
-; dependencies[] = theirmodule
+dependencies[] = token
+dependencies[] = entity_token
+dependencies[] = pathauto
+dependencies[] = views
