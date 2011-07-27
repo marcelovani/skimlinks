@@ -1,16 +1,14 @@
 <?php
 
-//api: 5f847cef199fffa001a443f83f78e313
-/*
-@todo
-
-remove debug
-when editing a node log submitted values structure of ef_product
-update node creation to submit values - mainly to get remote image url
-*/
-
-
-/* variable_set('everyfeed_apikey', '5f847cef199fffa001a443f83f78e313'); */
+/**
+ * Implementation of hook_perm().
+ */
+function everyfeed_permission() {
+  return array(
+    'manage products' => array('title' => 'Manage products', 'description' => 'Allows control of adding, removing and viewing products from the merchant data feeds.'),
+    'administer everyfeed' => array('title' => 'Administer Everyfeed', 'description' => 'API configuration.')  
+  );
+}
 
 /**
   * Implementation of hook_menu().
@@ -23,26 +21,45 @@ function everyfeed_menu() {
    'description' => 'Automated content aggregation from retail merchants.',
    'page callback' => 'drupal_get_form',
    'page arguments' => array('everyfeed_admin_products'),
-   'access arguments' => array('access content'),
+   'access arguments' => array('manage products'),
    'type' => MENU_NORMAL_ITEM,
   );
   
+  $items['admin/config/content/everyfeed/add'] = array(
+   'title' => 'Everyfeed Searches',
+   'description' => 'Automated content aggregation from retail merchants.',
+   'page callback' => 'drupal_get_form',
+   'page arguments' => array('everyfeed_admin_products'),  
+   'access arguments' => array('manage products'),     
+   'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  
   $items['everyfeed/categories'] = array(
-   'title' => '',
+   'title' => 'Category autocomplete',
    'description' => '',
    'page callback' => 'everyfeed_admin_categories_autocomplete',
-   'access arguments' => array('access content'),
+   'access arguments' => array('manage products'),
    'type' => MENU_CALLBACK,
   );
   
-  $items['everyfeed/remove/%ctools_js/tablenix/%'] = array(
-    'title' => 'Remove product keyword',
-    'page callback' => 'everyfeed_admin_products_remove',
-    'page arguments' => array(2, 4),
-    'access arguments' => array('access content'),
+  $items['everyfeed/remove/confirm/%'] = array(
+    'title' => 'Everyfeed remove product',
+    'page callback' => 'drupal_get_form', 
+    'page arguments' => array('everyfeed_admin_product_remove', 3),
+    'access arguments' => array('manage products'),    
     'type' => MENU_CALLBACK,
   );
-  
+
+  $items['admin/config/content/everyfeed/settings'] = array(
+    'title' => 'Settings',
+    'description' => 'Everyfeed configuration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('everyfeed_admin_settings_form'),
+    'access arguments' => array('administer everyfeed'),
+    'type' => MENU_LOCAL_TASK,
+    'weight' => 10
+  );
+
   return $items;
 } 
  
@@ -71,43 +88,12 @@ function everyfeed_admin_categories_autocomplete($term) {
   exit;
 }
 
-
-/**
- *  Nix a row from a table and restripe.
- */
-function everyfeed_admin_products_remove($js, $row) {
-  if (!$js) {
-    // We don't support degrading this from js because we're not
-    // using the server to remember the state of the table.
-    return MENU_ACCESS_DENIED;
-  }
-  ctools_include('ajax');
-
-  $commands = array();
-  $commands[] = ajax_command_remove("tr.everyfeed-product-row-$row");
-  $commands[] = ajax_command_restripe("table.everyfeed-product-table");
-  print ajax_render($commands);
-  
-  // Nuke row from database
-  db_delete('everyfeed_products')
-    ->condition('pid', $row)
-    ->execute();
-  
-  exit;
-}
-
  
 function everyfeed_admin_products($form_state) {
-  // Include the CTools tools that we need.
-  ctools_include('ajax');
-  
-  
   // Get our master category list
   $cats = everyfeed_get_category_list();
-  
   $product_searches = db_query('SELECT * FROM {everyfeed_products}');
   
-  // Create a table that we can have data removed from via AJAX.
   $header = array(t('Keyword'), t('Category'), t('Actions'));
   $rows = array();
 
@@ -115,75 +101,154 @@ function everyfeed_admin_products($form_state) {
     $rows[] = array(
       'class' => array('everyfeed-product-row-'. $product_search['pid']),
       'data' => array(
-        check_plain($product_search['keyword']),
+        l(check_plain($product_search['keyword']), 'admin/config/content/everyfeed/products/' . $product_search['pid']),
         check_plain($product_search['category_id'] == 0 ? t('All') : $cats[$product_search['category_id']]),
-        ctools_ajax_text_button("remove", "everyfeed/remove/nojs/tablenix/" . $product_search['pid'], t('Delete this product search')),
+        l(t('remove'), 'everyfeed/remove/confirm/' . $product_search['pid'])
       ),
     );
   }
 
   $form['productsearches'] = array(
-    '#markup' => theme('table', array('header' => $header, 'rows' => $rows, array('class' => array('everyfeed-product-table'))))
+    '#markup' => theme('table', array('header' => $header, 'rows' => $rows, 'sticky' => true, array('class' => array('everyfeed-product-table'))))
   );
   
-  $form['newproductsearch'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Keyword'),
-    '#size' => 65,
-    '#required' => true,
-    '#prefix' => '<div class="container-inline">',
-  );
-
-  $form['newproductcategory'] = array(
-    '#type' => 'textfield',
-    '#title' => t('Category'),
-    '#size' => 40,
-    '#autocomplete_path' => 'everyfeed/categories'
-  );
-    
-    
-  $form['add'] = array(
-    '#type' => 'submit',
-    '#value' => t('Add'),
-    '#suffix' => '</div>'
-  );
+  // No adding keywords without an API key
+  if (variable_get('everyfeed_apikey', '')) {
+    $form['newproductsearch'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Keyword'),
+      '#size' => 40,
+      '#required' => true,
+      '#prefix' => '<div class="container-inline">',
+    );
+  
+    $form['newproductcategory'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Category'),
+      '#size' => 30,
+      '#autocomplete_path' => 'everyfeed/categories'
+    );
+      
+    $form['add'] = array(
+      '#type' => 'submit',
+      '#value' => t('Add'),
+      '#suffix' => '</div>'
+    );
+  } else {
+    drupal_set_message(
+      t('You must !link before adding any product keywords.',
+      array('!link' => l(t('add your API key'), 'admin/config/content/everyfeed/settings'))),
+      'error'
+    );
+  }
   
   return $form;
 }
 
-function everyfeed_admin_products_validate($form, $form_state) {
-//!@todo make sure category is valid
-// check its not already in the list
+
+/**
+ * Confirm removal of a product range
+ * 
+ * @access public
+ * @param mixed $form
+ * @param mixed $form_state
+ * @param mixed $pid
+ * @return void
+ */
+function everyfeed_admin_product_remove($form, $form_state, $pid) {
+  $form = array(
+   'product_id' => array(
+      '#type' => 'value', 
+      '#value' => $pid,
+    ),
+  );
+  
+  return confirm_form($form, t('Delete products?'), 'admin/config/content/everyfeed',  t('This action cannot be undone.'), t('Remove products'), t('Cancel'));
 }
 
 
+/**
+ * Delete un-wanted products
+ * 
+ * @access public
+ * @param mixed $form
+ * @param mixed &$form_state
+ * @return void
+ */
+function everyfeed_admin_product_remove_submit($form, &$form_state) {
+
+  // Nuke all products which are related
+  $nids = db_query("SELECT entity_id FROM {field_data_field_searchphraseid} WHERE bundle = 'ef_product' AND field_searchphraseid_value = :phraseid", array(':phraseid' => $form_state['values']['product_id']))->fetchCol();
+  if (count($nids) > 0) node_delete_multiple($nids);
+  
+  // Nuke row from database
+  db_delete('everyfeed_products')
+    ->condition('pid', $form_state['values']['product_id'])
+    ->execute();
+  
+  $form_state['redirect'] = 'admin/config/content/everyfeed'; 
+}
+ 
+ 
+
+/**
+ * Make sure new product additions are valid
+ * 
+ * @access public
+ * @param mixed $form
+ * @param mixed $form_state
+ * @return void
+ */
+function everyfeed_admin_products_validate($form, $form_state) {
+  // Get our master category list
+  $cats = everyfeed_get_category_list();
+
+  // Make sure we already recognise the category  
+  if($form_state['values']['newproductcategory'] && !isset($cats[$form_state['values']['newproductcategory']])) {
+    form_set_error('newproductcategory', t('Category not recognised.'));
+  }
+}
+
+/**
+ * Add a new product range as nodes
+ * 
+ * @access public
+ * @param mixed $form
+ * @param mixed $form_state
+ * @return void
+ */
 function everyfeed_admin_products_submit($form, $form_state) { 
   $entry = array(
     'keyword' => $form_state['values']['newproductsearch'],
     'category_id' => $form_state['values']['newproductcategory']
   );
   
+  // Store the search phrase
   $result = drupal_write_record('everyfeed_products', $entry);
-  
-/*
-  module_load_include('inc', 'everyfeed', 'everyfeed.batch');
-  $q = array();
-  everyfeed_batch_check($entry['keyword'], $entry['category_id'], $q);
-  everyfeed_batch_process($q);
-*/
-  
-  everyfeed_admin_product_add($entry['keyword'], $entry['category_id']);
+ 	watchdog('everyfeed', 'phrase:' . print_r($entry, true), array(), WATCHDOG_DEBUG);
+
+  // Begin the importing of products matching the submitted search phrase 
+  everyfeed_admin_product_add($entry['keyword'], $entry['category_id'], $entry['pid']);
 }
 
 
-function everyfeed_admin_product_add($product, $category) {
+/**
+ * Set up a batch import process for the new search phrase keyword
+ * 
+ * @access public
+ * @param mixed $product
+ * @param mixed $category
+ * @param mixed $phrase_id
+ * @return void
+ */
+function everyfeed_admin_product_add($product, $category, $phrase_id) {
   $batch = array(
     'title' => t('Importing products'),
     'init_message' => t('Contacting the product database'),
     'progress_message' => t('Sifting through products'),
     'error_message' => t('Product import has encountered an error.'),
     'operations' => array(
-      array('everyfeed_batch_process', array($product, $category)),
+      array('everyfeed_batch_process', array(urlencode($product), $category, $phrase_id)),
     ),
     'finished' => 'everyfeed_batch_complete',
     'file' => drupal_get_path('module', 'everyfeed') . '/everyfeed.batch.inc',
@@ -191,14 +256,23 @@ function everyfeed_admin_product_add($product, $category) {
   batch_set($batch);
 }
 
+
+/**
+ * everyfeed_get_category_list function.
+ * 
+ * @access public
+ * @return void
+ */
 function everyfeed_get_category_list() {
   $data = everyfeed_callapi('getmeta/category');
 	$categories = array();
-	
-	// Re-jig the array of categories so that the cat ID is the array key
-	for ($i = 0; $i < count($data['meta']['category']); $i=$i+2) {
-  	$d = $data['meta']['category'][$i];
-		$categories[$data['meta']['category'][$i+1]] = $data['meta']['category'][$i];
+  
+  if (isset($data['meta'])) {
+  	// Re-jig the array of categories so that the cat ID is the array key
+  	for ($i = 0; $i < count($data['meta']['category']); $i=$i+2) {
+    	$d = $data['meta']['category'][$i];
+  		$categories[$data['meta']['category'][$i+1]] = $data['meta']['category'][$i];
+  	}
 	}
 
   return $categories;
@@ -212,7 +286,7 @@ function everyfeed_get_category_list() {
  * @return void
  */
 function everyfeed_get_merchant_list() {
-  $result = cache_get('merchants');
+  $result = cache_get('everyfeed_merchants');
   $merchants = isset($result->data) ? $result->data : array();
 
   if (!$merchants) {
@@ -226,7 +300,7 @@ function everyfeed_get_merchant_list() {
     }
      
     if ($merchants) {
-      cache_set('merchants', $merchants, 'cache', CACHE_PERMANENT);
+      cache_set('everyfeed_merchants', $merchants, 'cache', CACHE_PERMANENT);
     }
   }
 
@@ -234,19 +308,28 @@ function everyfeed_get_merchant_list() {
 }
 
 
+/**
+ * Actually execute the webservice call to Everyfeed API
+ * 
+ * @access public
+ * @param mixed $method
+ * @return void
+ */
 function everyfeed_callapi($method) {
   $result = cache_get($method); 
   $values = isset($result->data) ? $result->data : array();
 
   if (!$values) {
     $url = 'http://api.everyfeed.net/json/' . variable_get('everyfeed_apikey', '') . '/' . $method . '/';
-
     $result = drupal_http_request($url);
-    $values = drupal_json_decode($result->data);
-    $values = $values['everyFeed'];
-    
-    if ($values) {
-      cache_set($method, $values, 'cache', CACHE_TEMPORARY);
+        
+    if ($result->code == 200) {
+      $values = drupal_json_decode($result->data);
+      $values = $values['everyFeed'];
+      
+      if ($values) {
+        cache_set($method, $values, 'cache', CACHE_TEMPORARY);
+      }
     }
   }
   
@@ -254,15 +337,83 @@ function everyfeed_callapi($method) {
 }
 
 
+/**
+ * everyfeed_form_alter function.
+ * 
+ * @access public
+ * @param mixed &$form
+ * @param mixed &$form_state
+ * @param mixed $form_id
+ * @return void
+ */
 function everyfeed_form_alter(&$form, &$form_state, $form_id)
 {
   if($form_id == 'ef_product_node_form') {
-  	$form['#submit'][] = 'everyfeed_node_form_submit';
+  	$form['#validate'][] = 'everyfeed_node_form_validate';
 	}
 }
 
-function everyfeed_node_form_submit($form, &$form_state) 
+
+/**
+ * Check to make sure another node doesn't already have the same product ID
+ * 
+ * @access public
+ * @param mixed $form
+ * @param mixed &$form_state
+ * @return void
+ */
+function everyfeed_node_form_validate($form, &$form_state) 
 {
-	watchdog('everyfeed', print_r($form_state, true), array(), WATCHDOG_DEBUG);
-	dsm('yo ho ho');
+  if ($form_state['values']['field_productid']) {
+    $result = db_query("SELECT entity_id, revision_id FROM {field_data_field_productid} WHERE bundle = 'ef_product' AND field_productid_value = :productid", array(':productid' => $form_state['values']['field_productid']['und'][0]['value']));
+    if ($count = $result->rowCount()) {
+      $nodes = $result->fetchAssoc();
+      if ($form_state['values']['vid'] != $nodes['revision_id']) {
+       form_set_error('field_productid', t('A product with the same ID already exists in the system. !link', array('!link' => l(t('View product'), 'node/' . $nodes['revision_id']) ) ));
+      }
+    }
+  }
 }
+
+
+/**
+ * Implements hook_admin_settings() for module settings configuration.
+ */
+function everyfeed_admin_settings_form($form_state) {
+  $path = drupal_get_path('module', 'everyfeed');
+
+  $form['about'] = array(
+    '#markup' =>
+      theme('image', array('path' => $path . '/everyfeed.jpeg', 'alt' => 'Everyfeed', 'attributes' => array('style' => 'float: right') )) .
+      '<p>' . t('The Everyfeed API features over 18 million products across some of the best merchants and networks. To gain access to the product information from with in your site is as simple as applying for an API Key below.') . '</p>'
+  );
+
+  $form['account'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Account'),
+  );
+  
+  $form['account']['everyfeed_apikey'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API Key'),
+    '#description' => t('You can obtain an API key from the !link.', array('!link' => l(t('Skimlinks Lab'), 'http://skimlinks.com/?menu=login&return=apirequest'))),
+    '#default_value' => variable_get('everyfeed_apikey', ''),
+    '#size' => 35,
+    '#maxlength' => 32,
+    '#required' => TRUE
+  );
+  
+  $form['everyfeed_currency'] = array(
+    '#type' => 'select',
+    '#title' => t('Currency'),
+    '#description' => t('Merchants and the produts they have available will be dictated by the currency you set when executing the searches. This setting is global across the website.'),
+    '#options' => array('GBP', 'USD'),
+    '#default_value' => variable_get('everyfeed_currency', 'GBP')
+  );
+  
+  return system_settings_form($form);
+}
+
+//!@todo export setting for pathauto 'Pattern for all Product paths'
+//!@todo export content type definition
+//!@todo export product view View
