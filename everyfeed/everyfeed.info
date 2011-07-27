@@ -1,21 +1,31 @@
-; $Id$
 name = "Everyfeed"
 description = "Merchant product aggregation"
 
-; Required core version (Drupal 6+; no effect in Drupal 5)
-core = 7.x
-
-
-; Package name (see http://drupal.org/node/101009 for a list of names)
-package = "E-Commerce"
-
-
-; PHP version requirement (Drupal 6+)
-; php = 5.2
-
-
-; Module dependencies (Drupal 6+ style)
+core = "7.x"
+dependencies[] = "features"
+dependencies[] = "image"
+dependencies[] = "link"
+dependencies[] = "list"
+dependencies[] = "number"
+dependencies[] = "path"
+dependencies[] = "pathauto"
+dependencies[] = "taxonomy"
 dependencies[] = token
 dependencies[] = entity_token
-dependencies[] = pathauto
-dependencies[] = views
+dependencies[] = "views"
+description = "Automated content aggregation from retail merchants"
+features[ctools][] = "views:views_default:3.0"
+features[field][] = "node-ef_product-body"
+features[field][] = "node-ef_product-field_buylink"
+features[field][] = "node-ef_product-field_currency"
+features[field][] = "node-ef_product-field_image"
+features[field][] = "node-ef_product-field_price"
+features[field][] = "node-ef_product-field_productid"
+features[field][] = "node-ef_product-field_searchphraseid"
+features[field][] = "node-ef_product-field_tags"
+features[node][] = "ef_product"
+features[taxonomy][] = "product_categories"
+features[views_view][] = "everyfeed_productbykeyword"
+package = "Features"
+project = "Skimlinks"
+version = "7.x-0.7"
