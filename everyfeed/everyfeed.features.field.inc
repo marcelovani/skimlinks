@@ -701,7 +701,7 @@ function everyfeed_field_default_fields() {
         'allowed_values' => array(
           0 => array(
             'parent' => 0,
-            'vocabulary' => 'tags',
+            'vocabulary' => 'product_categories',
           ),
         ),
       ),
