@@ -13,7 +13,7 @@ function everyfeed_views_default_views() {
   $view = new view;
   $view->name = 'everyfeed_productbykeyword';
   $view->description = 'Lists all products associated with a single keyword phrase search.';
-  $view->tag = 'default';
+  $view->tag = 'Everyfeed';
   $view->base_table = 'node';
   $view->human_name = 'everyfeed_productbykeyword';
   $view->core = 7;
