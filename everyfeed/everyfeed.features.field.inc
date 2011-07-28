@@ -447,7 +447,7 @@ function everyfeed_field_default_fields() {
           'weight' => 16,
         ),
         'full' => array(
-          'label' => 'above',
+          'label' => 'hidden',
           'module' => 'text',
           'settings' => array(),
           'type' => 'text_default',
@@ -589,7 +589,7 @@ function everyfeed_field_default_fields() {
           'weight' => 15,
         ),
         'full' => array(
-          'label' => 'above',
+          'label' => 'hidden',
           'module' => 'text',
           'settings' => array(),
           'type' => 'text_default',
