@@ -1,6 +1,6 @@
 <?php
 /**
- * @file Rules - Installation file.
+ * @file Everyfeed - Installation file.
  */
  
 /**
@@ -40,5 +40,5 @@ function everyfeed_schema() {
  * Implements hook_install().
  */
 function everyfeed_install() {
-// create a content type http://integersoft.com/tutorials/programming/create-custom-content-type-programmatically-drupal-7
+  variable_set('pathauto_node_ef_product_pattern', 's:35:"[node:field-productid]/[node:title]";');
 }
