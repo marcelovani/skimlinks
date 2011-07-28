@@ -405,6 +405,223 @@ function everyfeed_field_default_fields() {
     ),
   );
 
+  // Exported field: 'node-ef_product-field_manufacturer_name'
+  $fields['node-ef_product-field_manufacturer_name'] = array(
+    'field_config' => array(
+      'active' => '1',
+      'cardinality' => '1',
+      'deleted' => '0',
+      'entity_types' => array(),
+      'field_name' => 'field_manufacturer_name',
+      'foreign keys' => array(
+        'format' => array(
+          'columns' => array(
+            'format' => 'format',
+          ),
+          'table' => 'filter_format',
+        ),
+      ),
+      'indexes' => array(
+        'format' => array(
+          0 => 'format',
+        ),
+      ),
+      'module' => 'text',
+      'settings' => array(
+        'max_length' => '255',
+      ),
+      'translatable' => '0',
+      'type' => 'text',
+    ),
+    'field_instance' => array(
+      'bundle' => 'ef_product',
+      'default_value' => NULL,
+      'deleted' => '0',
+      'description' => 'The name of the company who makes the product.',
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'module' => 'text',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => 16,
+        ),
+        'full' => array(
+          'label' => 'above',
+          'module' => 'text',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => '0',
+        ),
+        'teaser' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'node',
+      'field_name' => 'field_manufacturer_name',
+      'label' => 'Manufacturer',
+      'required' => 0,
+      'settings' => array(
+        'text_processing' => '0',
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'text',
+        'settings' => array(
+          'size' => '60',
+        ),
+        'type' => 'text_textfield',
+        'weight' => '10',
+      ),
+    ),
+  );
+
+  // Exported field: 'node-ef_product-field_merchant_id'
+  $fields['node-ef_product-field_merchant_id'] = array(
+    'field_config' => array(
+      'active' => '1',
+      'cardinality' => '1',
+      'deleted' => '0',
+      'entity_types' => array(),
+      'field_name' => 'field_merchant_id',
+      'foreign keys' => array(),
+      'indexes' => array(),
+      'module' => 'number',
+      'settings' => array(),
+      'translatable' => '0',
+      'type' => 'number_integer',
+    ),
+    'field_instance' => array(
+      'bundle' => 'ef_product',
+      'default_value' => NULL,
+      'deleted' => '0',
+      'description' => 'A unique number which identifies the merchant selling this product.',
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'module' => 'number',
+          'settings' => array(
+            'decimal_separator' => '.',
+            'prefix_suffix' => TRUE,
+            'scale' => 0,
+            'thousand_separator' => ' ',
+          ),
+          'type' => 'number_integer',
+          'weight' => 17,
+        ),
+        'full' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => '0',
+        ),
+        'teaser' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'node',
+      'field_name' => 'field_merchant_id',
+      'label' => 'Merchant ID',
+      'required' => 0,
+      'settings' => array(
+        'max' => '',
+        'min' => '',
+        'prefix' => '',
+        'suffix' => '',
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 0,
+        'module' => 'number',
+        'settings' => array(),
+        'type' => 'number',
+        'weight' => '12',
+      ),
+    ),
+  );
+
+  // Exported field: 'node-ef_product-field_merchant_name'
+  $fields['node-ef_product-field_merchant_name'] = array(
+    'field_config' => array(
+      'active' => '1',
+      'cardinality' => '1',
+      'deleted' => '0',
+      'entity_types' => array(),
+      'field_name' => 'field_merchant_name',
+      'foreign keys' => array(
+        'format' => array(
+          'columns' => array(
+            'format' => 'format',
+          ),
+          'table' => 'filter_format',
+        ),
+      ),
+      'indexes' => array(
+        'format' => array(
+          0 => 'format',
+        ),
+      ),
+      'module' => 'text',
+      'settings' => array(
+        'max_length' => '255',
+      ),
+      'translatable' => '0',
+      'type' => 'text',
+    ),
+    'field_instance' => array(
+      'bundle' => 'ef_product',
+      'default_value' => NULL,
+      'deleted' => '0',
+      'description' => 'The full name of the merchant who is supplying this product.',
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'module' => 'text',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => 15,
+        ),
+        'full' => array(
+          'label' => 'above',
+          'module' => 'text',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => '0',
+        ),
+        'teaser' => array(
+          'label' => 'above',
+          'settings' => array(),
+          'type' => 'hidden',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'node',
+      'field_name' => 'field_merchant_name',
+      'label' => 'Merchant Name',
+      'required' => 0,
+      'settings' => array(
+        'text_processing' => '0',
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'text',
+        'settings' => array(
+          'size' => '60',
+        ),
+        'type' => 'text_textfield',
+        'weight' => '11',
+      ),
+    ),
+  );
+
   // Exported field: 'node-ef_product-field_price'
   $fields['node-ef_product-field_price'] = array(
     'field_config' => array(
@@ -769,16 +986,22 @@ function everyfeed_field_default_fields() {
   // Translatables
   // Included for use with string extractors like potx.
   t('A unique identifying number for the product. This will be used to check if a product is already in your catalogue when updating items in the fuure.');
+  t('A unique number which identifies the merchant selling this product.');
   t('Body');
   t('Buy');
   t('Currency');
   t('Enter a comma-separated list of words to describe your content.');
   t('Every product that\'s imported comes from the execution of a search phrase query. The search ID is stored here.');
   t('Image');
+  t('Manufacturer');
+  t('Merchant ID');
+  t('Merchant Name');
   t('Price');
   t('Product ID');
   t('Search ID');
   t('Tags');
+  t('The full name of the merchant who is supplying this product.');
+  t('The name of the company who makes the product.');
   t('Upload an image to go with this article.');
 
   return $fields;
