@@ -156,6 +156,30 @@ function everyfeed_views_default_views() {
     'product_categories' => 'product_categories',
     'tags' => 0,
   );
+  /* Field: Supplier */
+  $handler->display->display_options['fields']['field_merchant_name']['id'] = 'field_merchant_name';
+  $handler->display->display_options['fields']['field_merchant_name']['table'] = 'field_data_field_merchant_name';
+  $handler->display->display_options['fields']['field_merchant_name']['field'] = 'field_merchant_name';
+  $handler->display->display_options['fields']['field_merchant_name']['ui_name'] = 'Supplier';
+  $handler->display->display_options['fields']['field_merchant_name']['label'] = 'Supplier';
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['alter_text'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['make_link'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['absolute'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['external'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['replace_spaces'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['trim_whitespace'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['nl2br'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['word_boundary'] = 1;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['ellipsis'] = 1;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['strip_tags'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['trim'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['alter']['html'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['element_label_colon'] = 1;
+  $handler->display->display_options['fields']['field_merchant_name']['element_default_classes'] = 1;
+  $handler->display->display_options['fields']['field_merchant_name']['hide_empty'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['empty_zero'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['hide_alter_empty'] = 0;
+  $handler->display->display_options['fields']['field_merchant_name']['field_api_classes'] = 0;
   /* Field: Content: Updated date */
   $handler->display->display_options['fields']['changed']['id'] = 'changed';
   $handler->display->display_options['fields']['changed']['table'] = 'node';

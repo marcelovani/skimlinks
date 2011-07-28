@@ -106,7 +106,7 @@ function everyfeed_batch_complete($success, $results, $operations) {
     $message = t('Finished with an error.');
   }
   
-  drupal_set_message($message);
+  drupal_set_message($message); 
 }
 
 
@@ -132,7 +132,6 @@ function everyfeed_batch_createnode($data) {
     $form_state['values']['status'] = 1;
     $form_state['values']['comment'] = 1;
     
-/*     $form_state['values']['created'] = strtotime($data['firstseen']); */
     $form_state['values']['date'] = $data['firstseen'];
     $form_state['values']['op'] = t('Save');
     
@@ -171,6 +170,9 @@ function everyfeed_batch_createnode($data) {
     /*
     "merchant": {"id": 12679,"name": "Amazon UK"},"by":"","manufacturer":"William Heinemann Ltd","category": []},
     */
+    $form_state['values']['field_merchant_id'][LANGUAGE_NONE][0]['value'] = $data['merchant']['id'];
+    $form_state['values']['field_merchant_name'][LANGUAGE_NONE][0]['value'] = $data['merchant']['name'];
+    $form_state['values']['field_manufacturer'][LANGUAGE_NONE][0]['value'] = $data['manufacturer'];
 
     // Create the node!
     module_load_include('inc', 'node', 'node.pages');
