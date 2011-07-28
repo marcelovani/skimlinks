@@ -419,7 +419,3 @@ function everyfeed_admin_settings_form($form_state) {
   
   return system_settings_form($form);
 }
-
-//!@todo export setting for pathauto 'Pattern for all Product paths'
-//!@todo export content type definition
-//!@todo export product view View
