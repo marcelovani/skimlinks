@@ -138,7 +138,6 @@ function everyfeed_batch_createnode($data) {
     $form_state['values']['field_searchphraseid'][LANGUAGE_NONE][0]['value'] = $data['searchphrase_id'];
     $form_state['values']['field_productid'][LANGUAGE_NONE][0]['value'] = $data['product_id'];
     
-    //!@todo clean up the node title sloppy brackets
     $form_state['values']['title'] = everyfeed_clean_title($data['title']);
     $form_state['values']['body'][LANGUAGE_NONE][0]['value'] =  $data['description'];    
     $form_state['values']['field_price'][LANGUAGE_NONE][0]['value'] = $data['price'] / 100;
@@ -166,10 +165,6 @@ function everyfeed_batch_createnode($data) {
       
     }
 
-    //!@todo include manufactuer info
-    /*
-    "merchant": {"id": 12679,"name": "Amazon UK"},"by":"","manufacturer":"William Heinemann Ltd","category": []},
-    */
     $form_state['values']['field_merchant_id'][LANGUAGE_NONE][0]['value'] = $data['merchant']['id'];
     $form_state['values']['field_merchant_name'][LANGUAGE_NONE][0]['value'] = $data['merchant']['name'];
     $form_state['values']['field_manufacturer'][LANGUAGE_NONE][0]['value'] = $data['manufacturer'];
