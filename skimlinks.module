@@ -1,0 +1,52 @@
+<?php
+
+/*
+input filter to change links during node save. uses the url shortner api https://accounts.skimlinks.com/shorturl
+ability to switch on site wide javascript in footer.
+disclosure block
+
+settings: publisher ID, subdomain redirection (cname check? link to https://accounts.skimlinks.com/customdomain), rss feed modification, 
+*/
+
+
+/**
+ * Implements hook_menu().
+ */
+function skimlinks_menu() {
+  $items['admin/config/system/skimlinks'] = array(
+    'title' => 'Skimlinks',
+    'description' => 'Enabling affiliate marketing using the Skimlinks API service.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('skimlinks_admin_settings_form'),
+    'access arguments' => array('administer skimlinks'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'skimlinks.admin.inc',
+  );
+
+  return $items;
+}
+
+
+/**
+ * Implements hook_permission().
+ */
+function skimlinks_permission() {
+  return array(
+    'administer skimlinks' => array(
+      'title' => t('Administer Skimlinks'),
+      'description' => t('Perform maintenance tasks for Skimlinks.'),
+    )
+  );
+}
+
+
+/**
+ * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
+ */
+function skimlinks_page_alter(&$page) {
+  global $user;
+
+  if ($id = variable_get('skimlinks_publisherid', false)) {
+    drupal_add_js("http://s.skimresources.com/js/{$id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
+  }
+}
