@@ -2,9 +2,6 @@
 
 define('BATCH_PRODUCTS_PER_CHUNK', 100);
 
-/*
-test - http://api.everyfeed.net/json/5f847cef199fffa001a443f83f78e313/search/dinosaur/start/500/rows/500/currency/GBP
-*/
 function everyfeed_batch_check($product, $category_id, &$context) {
 
   // Filter the products by category if one is provided
@@ -144,13 +141,10 @@ function everyfeed_batch_createnode($data) {
     $form_state['values']['field_currency'][LANGUAGE_NONE] = $data['currency'];
     $form_state['values']['field_buylink'][LANGUAGE_NONE][0]['url'] = $data['url'];
     
-    //!@todo lots of nodes fail to create because of the image denied error.
+    /* Lots of nodes fail to create because of the image denied error.
+     * This is a bug in Filefield Sources module see http://drupal.org/node/1221486
+     */
     if ($data['verified_image'] == 'True') {
-    
-    /*
-      !@todo image fail observations:
-      http://ecx.images-amazon.com/images/I/5189J64839L.jpg
-    */
       $form_state['values']['field_image'][LANGUAGE_NONE][0] = array(
         'filefield_remote' => array('url' => $data['image_url']),
         'title' => $data['title'],
@@ -158,11 +152,9 @@ function everyfeed_batch_createnode($data) {
       );
     }
     
-    // Build up a comma seperated list of categories for this product
-    if ($data['category'][0]) {
+    if (isset($data['category'][0])) {
       // Only take the first category which is the most specific.
       $form_state['values']['field_tags'][LANGUAGE_NONE] = ucwords($data['category'][0]['name']);
-      
     }
 
     $form_state['values']['field_merchant_id'][LANGUAGE_NONE][0]['value'] = $data['merchant']['id'];
