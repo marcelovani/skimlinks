@@ -75,7 +75,7 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
           'path' => $row['image_url'],
           'height' => '200px',
           'alt' => t('Image of @title', array('@title' => $row['title'])),
-          'title' => $row['title'],
+          'title' => check_plain($row['title']),
           'attributes' => array('style' => 'vertical-align: text-top'))
         )
       ));
@@ -91,6 +91,7 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
   }
   
 }
+
 
 function everyfeed_batch_complete($success, $results, $operations) {
   // The 'success' parameter means no fatal PHP errors were detected. All
@@ -115,8 +116,8 @@ function everyfeed_batch_complete($success, $results, $operations) {
  * @return void
  */
 function everyfeed_batch_createnode($data) {
-    
     global $user;
+
     $node = array(
      'type' => 'ef_product',
      'language' => LANGUAGE_NONE, 
@@ -148,7 +149,7 @@ function everyfeed_batch_createnode($data) {
       $form_state['values']['field_image'][LANGUAGE_NONE][0] = array(
         'filefield_remote' => array('url' => $data['image_url']),
         'title' => $data['title'],
-        'alt' => t('Image of !title', array('!title' => substr($data['title'], 0, 70))) // module imposes 80 character limit
+        'alt' => t('Image of !title', array('!title' => substr($data['title'], 0, 70))) // Image Field imposes 80 character limit
       );
     }
     
@@ -160,7 +161,7 @@ function everyfeed_batch_createnode($data) {
     $form_state['values']['field_merchant_id'][LANGUAGE_NONE][0]['value'] = $data['merchant']['id'];
     $form_state['values']['field_merchant_name'][LANGUAGE_NONE][0]['value'] = $data['merchant']['name'];
     $form_state['values']['field_manufacturer'][LANGUAGE_NONE][0]['value'] = $data['manufacturer'];
-
+    
     // Create the node!
     module_load_include('inc', 'node', 'node.pages');
     drupal_form_submit('ef_product_node_form', $form_state, (object) $node);
