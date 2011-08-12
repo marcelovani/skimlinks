@@ -169,7 +169,7 @@ function everyfeed_field_default_fields() {
       ),
       'entity_type' => 'node',
       'field_name' => 'field_buylink',
-      'label' => 'Buy',
+      'label' => 'Buy link',
       'required' => 0,
       'settings' => array(
         'attributes' => array(
@@ -759,7 +759,7 @@ function everyfeed_field_default_fields() {
       'bundle' => 'ef_product',
       'default_value' => NULL,
       'deleted' => '0',
-      'description' => 'A unique identifying number for the product. This will be used to check if a product is already in your catalogue when updating items in the fuure.',
+      'description' => 'A unique identifying number for the product. This will be used to check if a product is already in your catalogue when updating items in the future.',
       'display' => array(
         'default' => array(
           'label' => 'hidden',
@@ -985,10 +985,10 @@ function everyfeed_field_default_fields() {
 
   // Translatables
   // Included for use with string extractors like potx.
-  t('A unique identifying number for the product. This will be used to check if a product is already in your catalogue when updating items in the fuure.');
+  t('A unique identifying number for the product. This will be used to check if a product is already in your catalogue when updating items in the future.');
   t('A unique number which identifies the merchant selling this product.');
   t('Body');
-  t('Buy');
+  t('Buy link');
   t('Currency');
   t('Enter a comma-separated list of words to describe your content.');
   t('Every product that\'s imported comes from the execution of a search phrase query. The search ID is stored here.');
