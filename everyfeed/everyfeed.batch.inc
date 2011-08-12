@@ -1,6 +1,6 @@
 <?php
 
-define('BATCH_PRODUCTS_PER_CHUNK', 100);
+define('BATCH_PRODUCTS_PER_CHUNK', 50);
 
 function everyfeed_batch_check($product, $category_id, &$context) {
 
@@ -127,8 +127,8 @@ function everyfeed_batch_createnode($data) {
     $form_state['values']['language'] = $lang = $node['language']; // substitute for the language of the node
     $form_state['values']['name'] = $user->name;
     $form_state['values']['uid'] = 1;
-    $form_state['values']['status'] = 1;
-    $form_state['values']['comment'] = 1;
+    $form_state['values']['status'] = 1; // node is published
+    $form_state['values']['comment'] = 1; // comments disabled
     
     $form_state['values']['date'] = $data['firstseen'];
     $form_state['values']['op'] = t('Save');
