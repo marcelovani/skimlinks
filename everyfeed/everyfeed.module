@@ -56,6 +56,14 @@ function everyfeed_menu() {
     'type' => MENU_CALLBACK,
   );
 
+  $items['everyfeed/update/%'] = array(
+    'title' => 'Everyfeed update existing products',
+    'page callback' => 'everyfeed_admin_product_update', 
+    'page arguments' => array(2),
+    'access arguments' => array('manage products'),    
+    'type' => MENU_CALLBACK,
+  );
+
   $items['admin/config/content/everyfeed/settings'] = array(
     'title' => 'Settings',
     'description' => 'Everyfeed configuration',
@@ -104,12 +112,17 @@ function everyfeed_admin_products($form_state) {
   $rows = array();
 
   while ($product_search = $product_searches->fetchAssoc() ) {
+  	$actions = array(
+		l(t('remove'), 'everyfeed/remove/confirm/' . $product_search['pid']),
+		l(t('update'), 'everyfeed/update/' . $product_search['pid'])
+  	);
+  
     $rows[] = array(
       'class' => array('everyfeed-product-row-'. $product_search['pid']),
       'data' => array(
         l(check_plain($product_search['keyword']), 'admin/config/content/everyfeed/products/' . $product_search['pid']),
         check_plain($product_search['category_id'] == 0 ? t('All') : $cats[$product_search['category_id']]),
-        l(t('remove'), 'everyfeed/remove/confirm/' . $product_search['pid'])
+        theme('item_list', array('items' => $actions))
       ),
     );
   }
@@ -231,7 +244,7 @@ function everyfeed_admin_products_submit($form, $form_state) {
   
   // Store the search phrase
   $result = drupal_write_record('everyfeed_products', $entry);
- 	watchdog('everyfeed', 'phrase:' . print_r($entry, true), array(), WATCHDOG_DEBUG);
+ 	watchdog('everyfeed', 'phrase:' . print_r($entry, true), array(), WATCHDOG_DEBUG); // @debug
 
   // Begin the importing of products matching the submitted search phrase 
   everyfeed_admin_product_add($entry['keyword'], $entry['category_id'], $entry['pid']);
@@ -260,6 +273,27 @@ function everyfeed_admin_product_add($product, $category, $phrase_id) {
     'file' => drupal_get_path('module', 'everyfeed') . '/everyfeed.batch.inc',
   );
   batch_set($batch);
+}
+
+
+
+function everyfeed_admin_product_update($phrase_id) {
+  $search = db_query("SELECT keyword, category_id FROM {everyfeed_products} WHERE pid = :phraseid", array(':phraseid' => $phrase_id));
+  $record = $search->fetchObject();
+  
+  $batch = array(
+    'title' => t('Updating products'),
+    'init_message' => t('Contacting the product database'),
+    'progress_message' => t('Sifting through products'),
+    'error_message' => t('Product import has encountered an error.'),
+    'operations' => array(
+      array('everyfeed_batch_process', array(urlencode($record->keyword), $record->category_id, $phrase_id)),
+    ),
+    'finished' => 'everyfeed_batch_complete',
+    'file' => drupal_get_path('module', 'everyfeed') . '/everyfeed.batch.inc',
+  );
+  batch_set($batch);
+  batch_process('admin/config/content/everyfeed');
 }
 
 
@@ -375,7 +409,23 @@ function everyfeed_node_form_validate($form, &$form_state)
     if ($count = $result->rowCount()) {
       $nodes = $result->fetchAssoc();
       if ($form_state['values']['vid'] != $nodes['revision_id']) {
-       form_set_error('field_productid', t('A product with the same ID already exists in the system. !link', array('!link' => l(t('View product'), 'node/' . $nodes['revision_id']) ) ));
+      
+        $orig = node_load(array('nid' => $nodes['entity_id'], 'vid' => $nodes['revision_id']));
+        
+        form_set_value($form['nid'], $nodes['entity_id'], $form_state);
+        form_set_value($form['vid'], $nodes['revision_id'], $form_state);
+        
+        $updatefields = variable_get('everyfeed_updatefields', array('field_price'));
+  
+        foreach($updatefields as $updatefield => $active) {
+          if ($updatefield === $active) {
+            $f = $orig->$updatefield;
+            $form_state['values'][$updatefield] = $f['und'];
+            //dsm('protected: ' . $updatefield . ' set to ' . print_r($f['und'], true));
+          }
+        }
+   
+       //form_set_error('field_productid', t('A product with the same ID already exists in the system. !link', array('!link' => l(t('View product'), 'node/' . $nodes['revision_id']) ) ));
       }
     }
   }
@@ -409,12 +459,38 @@ function everyfeed_admin_settings_form($form_state) {
     '#required' => TRUE
   );
   
-  $form['everyfeed_currency'] = array(
+  $form['products'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Products'),
+    '#description' => t('When you create Everyfeed searches for products the results are used to generate Product nodes.')
+  );
+  
+  $form['products']['everyfeed_currency'] = array(
     '#type' => 'select',
     '#title' => t('Currency'),
-    '#description' => t('Merchants and the produts they have available will be dictated by the currency you set when executing the searches. This setting is global across the website.'),
+    '#description' => t('Merchants and the products they have available will be dictated by the currency you set when executing the searches. This setting is global across this website.'),
     '#options' => array('GBP', 'USD'),
     '#default_value' => variable_get('everyfeed_currency', 'GBP')
+  );
+  
+  // Obtain a list of fields which are used in our custom content type bundle
+  $entityfields = field_info_instances('node', 'ef_product');
+  $updatefields = array('title' => t('Title'));
+  
+  foreach($entityfields as $field) {
+    $updatefields[$field['field_name']] = $field['label'];
+  }
+  
+  // We never want to show these as configurable update fields
+  unset($updatefields['field_searchphraseid']);
+  unset($updatefields['field_currency']);
+  
+  $form['products']['everyfeed_updatefields'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Protected Product fields'),
+    '#description' => t('Select the product fields which are okay to be updated from the Everyfeed product feed. Disable fields if you plan to manually change the content and wish to protect it from being replaced automatically.'),
+    '#options' => $updatefields,
+    '#default_value' => variable_get('everyfeed_updatefields', array('field_price'))
   );
   
   return system_settings_form($form);
