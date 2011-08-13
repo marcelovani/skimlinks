@@ -204,6 +204,10 @@ function everyfeed_views_default_views() {
   $handler->display->display_options['fields']['changed']['empty_zero'] = 0;
   $handler->display->display_options['fields']['changed']['hide_alter_empty'] = 0;
   $handler->display->display_options['fields']['changed']['date_format'] = 'short';
+  /* Sort criterion: Content: Nid */
+  $handler->display->display_options['sorts']['nid']['id'] = 'nid';
+  $handler->display->display_options['sorts']['nid']['table'] = 'node';
+  $handler->display->display_options['sorts']['nid']['field'] = 'nid';
   /* Contextual filter: Content: Search ID (field_searchphraseid) */
   $handler->display->display_options['arguments']['field_searchphraseid_value']['id'] = 'field_searchphraseid_value';
   $handler->display->display_options['arguments']['field_searchphraseid_value']['table'] = 'field_data_field_searchphraseid';
