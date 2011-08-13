@@ -2,8 +2,6 @@
 
 /*
 input filter to change links during node save. uses the url shortner api https://accounts.skimlinks.com/shorturl
-
-settings: subdomain redirection (cname check? link to https://accounts.skimlinks.com/customdomain), rss feed modification, 
 */
 
 
@@ -106,4 +104,33 @@ function skimlinks_block_save($delta = '', $edit = array()) {
       variable_set('skimlinks_disclosurebadge', (int) $edit['skimlinks_disclosurebadge']);
       break;
   }
+}
+
+
+/**
+ * Implements hook_filter_info().
+ *
+ * Provide Skimlinks url filter.
+ */
+function skimlinks_filter_info() {
+  $filters['skimlinks'] = array(
+    'title' => t('Skimlinks'),
+    'description' => t('Converts any links to recognised merchants in to shortened affiliated links.'),
+    'process callback' => 'skimlinks_urlshorten',
+    'tips callback' => '_skimlinks_filter_tips',
+    'cache' => TRUE,
+  );
+  return $filters;
+}
+
+
+function _skimlinks_filter_tips($filter, $format, $long = FALSE) {
+  $output = '';
+  return $output;
+}
+
+
+function skimlinks_urlshorten($text, $filter) {
+  $output = $body;
+  return $output;
 }

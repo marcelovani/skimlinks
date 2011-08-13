@@ -1,4 +1,8 @@
 <?php
+/*
+  @todo
+  settings: rss feed modification, 
+*/
 
 /**
  * Implements hook_admin_settings() for module settings configuration.
@@ -26,6 +30,17 @@ function skimlinks_admin_settings_form($form_state) {
                       )
   );
 
+  $form['account']['skimlinks_cname'] = array(
+    '#title' => t('Custom redirection sub domain'),
+    '#type' => 'textfield',
+    '#default_value'  => variable_get('skimlinks_cname', 'http://go.skimlinks.com'),
+    '#description' => t('You may use a custom subdomain to redirect your affiliated links through rather than the default go.skimlinks.com. For more information please see the !customredirect', array('!customredirect' => l(t('Skimlinks redirect help'), 'https://accounts.skimlinks.com/customdomain')))
+  );
+
   return system_settings_form($form);
 }
 
+
+function skimlinks_admin_settings_validate($form, &$form_state) {
+  //validate cname?
+}
