@@ -148,7 +148,7 @@ function everyfeed_batch_createnode($data) {
     if ($data['verified_image'] == 'True') {
       $form_state['values']['field_image'][LANGUAGE_NONE][0] = array(
         'filefield_remote' => array('url' => $data['image_url']),
-        'title' => $data['title'],
+        'title' => check_plain(substr($data['title'], 0, 70)),
         'alt' => t('Image of !title', array('!title' => substr($data['title'], 0, 70))) // Image Field imposes 80 character limit
       );
     }
@@ -159,8 +159,8 @@ function everyfeed_batch_createnode($data) {
     }
 
     $form_state['values']['field_merchant_id'][LANGUAGE_NONE][0]['value'] = $data['merchant']['id'];
-    $form_state['values']['field_merchant_name'][LANGUAGE_NONE][0]['value'] = $data['merchant']['name'];
-    $form_state['values']['field_manufacturer'][LANGUAGE_NONE][0]['value'] = $data['manufacturer'];
+    $form_state['values']['field_merchant_name'][LANGUAGE_NONE][0]['value'] = check_plain($data['merchant']['name']);
+    $form_state['values']['field_manufacturer'][LANGUAGE_NONE][0]['value'] = check_plain($data['manufacturer']);
     
     // Create the node!
     module_load_include('inc', 'node', 'node.pages');
