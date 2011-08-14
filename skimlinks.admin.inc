@@ -1,8 +1,13 @@
 <?php
-/*
-  @todo
-  settings: rss feed modification, 
-*/
+/**
+ * @file
+ * Website administrator settings for Skimlinks.
+ *
+ * @todo
+ * settings: rss feed modification
+ *
+ * by Mike Carter ("budda", http://drupal.org/user/13164)
+ */
 
 /**
  * Implements hook_admin_settings() for module settings configuration.
@@ -23,9 +28,9 @@ function skimlinks_admin_settings_form($form_state) {
     '#description' => t('This ID is unique to each site you want to affiliate your links on, and is in the form of XXXXxYYYYYY. To get a Web Property ID
                         !skimreg, or if you already have registered your site, go to your Skimlinks !managesites page to see the ID next to your domain. !webpropertyid.',
                         array(
-                          '!skimreg' => l('register your site with Skimlinks', 'http://www.skimlinks.com/register'),
-                          '!managesites' => l('Manage sites', 'https://accounts.skimlinks.com/sites'),
-                          '!webpropertyid' => l('Find more information in the documentation', 'https://accounts.skimlinks.com/support'),
+                          '!skimreg' => l(t('register your site with Skimlinks'), 'http://www.skimlinks.com/register'),
+                          '!managesites' => l(t('Manage sites'), 'https://accounts.skimlinks.com/sites'),
+                          '!webpropertyid' => l(t('Find more information in the documentation'), 'https://accounts.skimlinks.com/support'),
                         )
                       )
   );
@@ -62,7 +67,8 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
     if ($original->data !== $new->data) {
       form_set_error('skimlinks_subdomain', t('Your custom redirection sub-domain is not currently pointing at Skimlinks servers.'));
     }
-  } else {
+  }
+  else {
     form_set_value($form['account']['skimlinks_subdomain'], 'http://go.redirectingat.com', $form_state);
   }
 }

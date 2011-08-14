@@ -1,5 +1,11 @@
 <?php
-
+/**
+ * @file
+ * Batch import functions for the Everyfeed API module.
+ *
+ * by Mike Carter ("budda", http://drupal.org/user/13164)
+ */
+ 
 define('BATCH_PRODUCTS_PER_CHUNK', 50);
 
 function everyfeed_batch_check($product, $category_id, &$context) {
@@ -13,18 +19,19 @@ function everyfeed_batch_check($product, $category_id, &$context) {
   $data = everyfeed_callapi('search/' . $product . $category . '/start/0/rows/1/currency/' . variable_get('everyfeed_currency', 'GBP'));
   
   // Do we have some results
-  if($data['status'] == 200 && $data['numFound'] > 0) {
+  if ($data['status'] == 200 && $data['numFound'] > 0) {
     $context['sandbox']['max'] = $data['numFound']; 
     $context['sandbox']['product'] = $product;
     $context['sandbox']['category_id'] = $category_id;
     $context['sandbox']['api'] = $product . $category;
         
     $context['message'] = t('Found @count products about %keyword', array('@count' => $data['numFound'], '%keyword' => $product));
-    return true;
-  } else {
+    return TRUE;
+  }
+  else {
     //!@todo mark this search as crap and let user know
     $context['message'] = t('Failed');
-    return false;
+    return FALSE;
   }
 }
 
@@ -62,7 +69,7 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
   
   $context['sandbox']['progress'] += BATCH_PRODUCTS_PER_CHUNK;
 
-  if($data['status'] == 200) {
+  if ($data['status'] == 200) {
     foreach ($data['products'] as $row) {
       $context['results'][] = $row['title'];
       $context['sandbox']['progress']++;
@@ -184,9 +191,9 @@ function everyfeed_clean_title($title) {
     array(']', '[')
   );
 
-  foreach($bad as $char) {
-    if($closebracket = stripos($title, $char[0]) != FALSE) {
-      if($openbracket = stripos($title, $char[1]) == FALSE) {
+  foreach ($bad as $char) {
+    if ($closebracket = stripos($title, $char[0]) != FALSE) {
+      if ($openbracket = stripos($title, $char[1]) == FALSE) {
         $title = str_replace($char[0], '', $title);
       }
     }

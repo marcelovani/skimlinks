@@ -1,9 +1,10 @@
 <?php
-
-/*
-input filter to change links during node save. uses the url shortner api https://accounts.skimlinks.com/shorturl
-*/
-
+/**
+ * @file
+ * Skimlinks affiliate marketing service
+ *
+ * by Mike Carter ("budda", http://drupal.org/user/13164)
+ */
 
 /**
  * Implements hook_menu().
@@ -42,17 +43,12 @@ function skimlinks_permission() {
 function skimlinks_page_alter(&$page) {
   global $user;
 
-  if ($publisher_id = variable_get('skimlinks_publisherid', false)) {
+  if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
   
-  	if ($subdomain = variable_get('skimlinks_subdomain', false)){
-/*
-  		$output .= '<script type="text/javascript">' . "\n";
-  		$output .= 'var skimlinks_domain = "' . $subdomain . '";' . "\n";
-  		$output .= '</script>' . "\n";
-*/	
-	    drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
-  	}
-  
+    if ($subdomain = variable_get('skimlinks_subdomain', FALSE)) {
+      drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
+    }
+    
     drupal_add_js("http://s.skimresources.com/js/{$publisher_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
   }
 }
@@ -71,11 +67,12 @@ function skimlinks_block_info() {
 function skimlinks_block_view($delta = '') {
   $block = array();
 
-  switch($delta) {
+  switch ($delta) {
     case 'disclosurebadge':
-      if ($publisher_id = variable_get('skimlinks_publisherid', false)) {
+      if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
         $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( explode( 'x', $publisher_id ) ) . '&amp;d=' . end( explode( 'x', $publisher_id ) ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
-      } else {
+      }
+      else {
         $content = t('You need to set your sites !publisherid first.', array('!publisherid' => l(t('Publisher ID'), 'admin/config/system/skimlinks')));
       }
       
@@ -97,14 +94,14 @@ function skimlinks_block_view($delta = '') {
 function skimlinks_block_configure($delta = '') {
   $form = array();
 
-  switch($delta) {
+  switch ($delta) {
     case 'disclosurebadge':
       $form['badge'] = array(
         '#type' => 'fieldgroup',
         '#title' => t('Badge')
       );
       
-      for($count = 1;  $count <=5; $count++) {
+      for ($count = 1; $count <=5; $count++) {
         $options[$count] = theme('image', array(
         'path' => 'https://accounts.skimlinks.com/img/referral/button_' . $count . '.gif',
         'title' => t('Disclosure badge style ' . $count),
@@ -130,7 +127,7 @@ function skimlinks_block_configure($delta = '') {
  * Implements hook_block_save().
  */
 function skimlinks_block_save($delta = '', $edit = array()) {
-  switch($delta) {
+  switch ($delta) {
     case 'disclosurebadge':
       variable_set('skimlinks_disclosurebadge', (int) $edit['skimlinks_disclosurebadge']);
       break;
@@ -156,7 +153,6 @@ function skimlinks_filter_info() {
 
 
 /**
- * _skimlinks_filter_settings function.
  * Allow admins to select the type of short url
  * 
  * @access private
@@ -187,7 +183,7 @@ function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defa
 
 
 /**
- * skimlinks_shorten_urls function.
+ * Find all urls in the node field content and get them shortened
  * 
  * @access public
  * @param mixed $text
@@ -201,14 +197,14 @@ function skimlinks_shorten_urls($text, $filter) {
 
 
 /**
- * skimlinks_urlshortener function.
+ * Call the Skimlinks API to generate a short affiliated url from our source url
  * 
  * @access public
  * @param mixed $url
  * @return void
  */
 function skimlinks_urlshortener($url) {
-  $id = variable_get('skimlinks_publisherid', false);
+  $id = variable_get('skimlinks_publisherid', FALSE);
   $publisher_id = current( explode( 'x', $id ));
   $host = variable_get('filter_skimlink_host', 'buyth.at');
   
@@ -221,5 +217,5 @@ function skimlinks_urlshortener($url) {
     return $tinyurl[0];
   }
   
-  return false;
+  return FALSE;
 }
