@@ -148,14 +148,25 @@ function skimlinks_filter_info() {
     'title' => t('Skimlinks'),
     'description' => t('Converts links to recognised merchants in to shortened affiliated links.'),
     'process callback' => 'skimlinks_shorten_urls',
-    'tips callback' => '_skimlinks_filter_tips',
     'settings callback' => '_skimlinks_filter_settings',
     'cache' => TRUE,
   );
   return $filters;
 }
 
-//!@todo url shortner settings
+
+/**
+ * _skimlinks_filter_settings function.
+ * Allow admins to select the type of short url
+ * 
+ * @access private
+ * @param mixed $form
+ * @param mixed &$form_state
+ * @param mixed $filter
+ * @param mixed $format
+ * @param mixed $defaults
+ * @return void
+ */
 function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defaults) {
   $filter->settings += $defaults;
 
@@ -172,21 +183,6 @@ function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defa
     '#description' => t('Your link will be, for example, http://buyth.at/gsca5'),
   );
   return $settings;
-}
- 
-
-/**
- * _skimlinks_filter_tips function.
- * 
- * @access private
- * @param mixed $filter
- * @param mixed $format
- * @param mixed $long. (default: FALSE)
- * @return void
- */
-function _skimlinks_filter_tips($filter, $format, $long = FALSE) {
-  $output = '';
-  return $output;
 }
 
 
