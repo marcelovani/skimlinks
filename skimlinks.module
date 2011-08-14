@@ -42,8 +42,18 @@ function skimlinks_permission() {
 function skimlinks_page_alter(&$page) {
   global $user;
 
-  if ($id = variable_get('skimlinks_publisherid', false)) {
-    drupal_add_js("http://s.skimresources.com/js/{$id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
+  if ($publisher_id = variable_get('skimlinks_publisherid', false)) {
+  
+  	if ($subdomain = variable_get('skimlinks_subdomain', false)){
+/*
+  		$output .= '<script type="text/javascript">' . "\n";
+  		$output .= 'var skimlinks_domain = "' . $subdomain . '";' . "\n";
+  		$output .= '</script>' . "\n";
+*/	
+	    drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
+  	}
+  
+    drupal_add_js("http://s.skimresources.com/js/{$publisher_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
   }
 }
 
@@ -63,10 +73,17 @@ function skimlinks_block_view($delta = '') {
 
   switch($delta) {
     case 'disclosurebadge':
+      if ($publisher_id = variable_get('skimlinks_publisherid', false)) {
+        $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( explode( 'x', $publisher_id ) ) . '&amp;d=' . end( explode( 'x', $publisher_id ) ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
+      } else {
+        $content = t('You need to set your sites !publisherid first.', array('!publisherid' => l(t('Publisher ID'), 'admin/config/system/skimlinks')));
+      }
+      
       $block = array(
         'subject' => '',
-        'content' => 'skim my' //!@todo populate content
+        'content' => $content
       );
+      
       break;
   }
 
@@ -82,11 +99,25 @@ function skimlinks_block_configure($delta = '') {
 
   switch($delta) {
     case 'disclosurebadge':
-      $form['skimlinks_disclosurebadge'] = array(
-        '#type' => 'select',
-        '#title' => t('Style of disclosure badge'),
+      $form['badge'] = array(
+        '#type' => 'fieldgroup',
+        '#title' => t('Badge')
+      );
+      
+      for($count = 1;  $count <=5; $count++) {
+        $options[$count] = theme('image', array(
+        'path' => 'https://accounts.skimlinks.com/img/referral/button_' . $count . '.gif',
+        'title' => t('Disclosure badge style ' . $count),
+        'alt' => t('Image of a disclosure badge style ' . $count)
+        ));
+      }
+      
+      $form['badge']['skimlinks_disclosurebadge'] = array(
+        '#type' => 'radios',
+        '#title' => t('Style'),
         '#default_value' => variable_get('skimlinks_disclosurebadge', 1),
-        '#options' => array('1' => t('Style 1')),
+        '#options' => $options,
+        '#description' => t("Select a style of badge that best fits with your site design colours."),
       );
     break;
   }
@@ -115,22 +146,84 @@ function skimlinks_block_save($delta = '', $edit = array()) {
 function skimlinks_filter_info() {
   $filters['skimlinks'] = array(
     'title' => t('Skimlinks'),
-    'description' => t('Converts any links to recognised merchants in to shortened affiliated links.'),
-    'process callback' => 'skimlinks_urlshorten',
+    'description' => t('Converts links to recognised merchants in to shortened affiliated links.'),
+    'process callback' => 'skimlinks_shorten_urls',
     'tips callback' => '_skimlinks_filter_tips',
+    'settings callback' => '_skimlinks_filter_settings',
     'cache' => TRUE,
   );
   return $filters;
 }
 
+//!@todo url shortner settings
+function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defaults) {
+  $filter->settings += $defaults;
 
+  $settings['filter_skimlink_host'] = array(
+    '#type' => 'select',
+    '#title' => t('URL Prefix'),
+    '#default_value' => 'buyth.at',
+    '#options' => array(
+      'buyth.at' => 'BuyTh.at',
+      'getth.at' => 'GetTh.at',
+      'useth.at' => 'UseTh.at',
+      'tryth.at' => 'TryTh.at',
+    ),
+    '#description' => t('Your link will be, for example, http://buyth.at/gsca5'),
+  );
+  return $settings;
+}
+ 
+
+/**
+ * _skimlinks_filter_tips function.
+ * 
+ * @access private
+ * @param mixed $filter
+ * @param mixed $format
+ * @param mixed $long. (default: FALSE)
+ * @return void
+ */
 function _skimlinks_filter_tips($filter, $format, $long = FALSE) {
   $output = '';
   return $output;
 }
 
 
-function skimlinks_urlshorten($text, $filter) {
-  $output = $body;
-  return $output;
+/**
+ * skimlinks_shorten_urls function.
+ * 
+ * @access public
+ * @param mixed $text
+ * @param mixed $filter
+ * @return void
+ */
+function skimlinks_shorten_urls($text, $filter) {
+  $text = preg_replace_callback('/(http:\/\/(?:www\.)?[^"\s]*)/i', 'skimlinks_urlshortener', $text);
+  return $text;
+}
+
+
+/**
+ * skimlinks_urlshortener function.
+ * 
+ * @access public
+ * @param mixed $url
+ * @return void
+ */
+function skimlinks_urlshortener($url) {
+  $id = variable_get('skimlinks_publisherid', false);
+  $publisher_id = current( explode( 'x', $id ));
+  $host = variable_get('filter_skimlink_host', 'buyth.at');
+  
+  $url = $url[1];
+
+  $shortener = drupal_http_request('https://accounts.skimlinks.com/shorturl_ajax.php?url=' . $url . '&host=' . $host . '&pubid=' . $publisher_id);
+  if ($shortener->code == 200) {
+    $tinyurl = array();
+    preg_match('/(http:\/\/' . $host . '\/[a-zA-Z0-9]*)/', $shortener->data, $tinyurl);
+    return $tinyurl[0];
+  }
+  
+  return false;
 }
