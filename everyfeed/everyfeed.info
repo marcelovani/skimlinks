@@ -1,4 +1,5 @@
 core = "7.x"
+dependencies[] = "entity"
 dependencies[] = "entity_token"
 dependencies[] = "features"
 dependencies[] = "filefield_sources"
