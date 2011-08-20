@@ -365,10 +365,12 @@ function everyfeed_callapi($method) {
         
     if ($result->code == 200) {
       $values = drupal_json_decode($result->data);
-      $values = $values['everyFeed'];
-      
-      if ($values) {
-        cache_set($method, $values, 'cache', CACHE_TEMPORARY);
+      if (isset($values['everyFeed'])) {
+        $values = $values['everyFeed'];
+        
+        if ($values) {
+          cache_set($method, $values, 'cache', CACHE_TEMPORARY);
+        }
       }
     }
   }
@@ -497,7 +499,7 @@ function everyfeed_admin_settings_form($form_state) {
     '#title' => t('Protected Product fields'),
     '#description' => t('Select any product fields you plan to manually change the content of and protect from being replaced automatically during an Everyfeed update.'),
     '#options' => $updatefields,
-    '#default_value' => variable_get('everyfeed_updatefields', array('field_price'))
+    '#default_value' => variable_get('everyfeed_updatefields', array('title', 'body'))
   );
   
   return system_settings_form($form);
