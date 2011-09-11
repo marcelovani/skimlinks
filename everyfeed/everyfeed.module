@@ -160,7 +160,7 @@ function everyfeed_admin_products($form_state) {
       'error'
     );
   }
-  
+
   return $form;
 }
 
@@ -261,6 +261,9 @@ function everyfeed_admin_products_submit($form, $form_state) {
  * @return void
  */
 function everyfeed_admin_product_add($product, $category, $phrase_id) {
+
+  //!@todo call everyfeed_batch_check() to get total results and then build an array of operations for the below batch
+
   $batch = array(
     'title' => t('Importing products'),
     'init_message' => t('Contacting the product database'),
@@ -362,7 +365,7 @@ function everyfeed_callapi($method) {
   if (!$values) {
     $url = 'http://api.everyfeed.net/json/' . variable_get('everyfeed_apikey', '') . '/' . $method . '/';
     $result = drupal_http_request($url);
-        
+
     if ($result->code == 200) {
       $values = drupal_json_decode($result->data);
       if (isset($values['everyFeed'])) {
@@ -417,23 +420,23 @@ function everyfeed_node_form_validate($form, &$form_state) {
         form_set_value($form['vid'], $nodes['revision_id'], $form_state);
         
         // Preserve some existing flags
-        $orig = node_load(array('nid' => $nodes['entity_id'], 'vid' => $nodes['revision_id']));
-
-        form_set_value($form['options']['status'], $orig->status, $form_state);       
-        form_set_value($form['options']['promote'], $orig->promote, $form_state);
-        form_set_value($form['options']['sticky'], $orig->sticky, $form_state);
-        //form_set_value($form['#node'], $orig, $form_state); //!@todo preserve more parts of the existing node.
-                
-        // Preserve any user selected bundle fields
-        $updatefields = variable_get('everyfeed_updatefields', array('field_price'));
-  
-        foreach($updatefields as $updatefield => $active) {
-          if ($updatefield === $active) {
-            $f = $orig->$updatefield;
-            $form_state['values'][$updatefield] = $f[LANGUAGE_NONE];
+        $orig = node_load($nodes['entity_id'], $nodes['revision_id']);
+        if ($orig) {
+          form_set_value($form['options']['status'], $orig->status, $form_state);       
+          form_set_value($form['options']['promote'], $orig->promote, $form_state);
+          form_set_value($form['options']['sticky'], $orig->sticky, $form_state);
+          //form_set_value($form['#node'], $orig, $form_state); //!@todo preserve more parts of the existing node.
+                  
+          // Preserve any user selected bundle fields
+          $updatefields = variable_get('everyfeed_updatefields', array('field_price'));
+    
+          foreach($updatefields as $updatefield => $active) {
+            if ($updatefield === $active) {
+              $f = $orig->$updatefield;
+              $form_state['values'][$updatefield] = $f[LANGUAGE_NONE];
+            }
           }
         }
-        
        //form_set_error('field_productid', t('A product with the same ID already exists in the system. !link', array('!link' => l(t('View product'), 'node/' . $nodes['revision_id']) ) ));
       }
     }
