@@ -2,6 +2,8 @@
 /**
  * @file
  * Code for the Everyfeed feature.
+ *
+ * by Mike Carter ("budda", http://drupal.org/user/13164)
  */
 
 include_once('everyfeed.features.inc');
@@ -91,10 +93,10 @@ function everyfeed_admin_categories_autocomplete($term) {
     $cats = everyfeed_get_category_list();
   
     // Remove categories which don't match the search term
-    $cat_match = array_filter($cats, function ($var) use ($term) { return (stristr($var, $term)) ? true : false; });
+    $cat_match = array_filter($cats, function($var) use($term) { return (stristr($var, $term)) ? TRUE : FALSE;} );
   
     // Only show the first 10 matches
-    $cat_match = array_slice($cat_match, 0, 10, true);
+    $cat_match = array_slice($cat_match, 0, 10, TRUE);
   
     print drupal_json_encode($cat_match);
   }
@@ -112,13 +114,13 @@ function everyfeed_admin_products($form_state) {
   $rows = array();
 
   while ($product_search = $product_searches->fetchAssoc() ) {
-  	$actions = array(
-		l(t('remove'), 'everyfeed/remove/confirm/' . $product_search['pid']),
-		l(t('update'), 'everyfeed/update/' . $product_search['pid'])
-  	);
+  $actions = array(
+    l(t('remove'), 'everyfeed/remove/confirm/' . $product_search['pid']),
+    l(t('update'), 'everyfeed/update/' . $product_search['pid'])
+  );
   
     $rows[] = array(
-      'class' => array('everyfeed-product-row-'. $product_search['pid']),
+      'class' => array('everyfeed-product-row-' . $product_search['pid']),
       'data' => array(
         l(check_plain($product_search['keyword']), 'admin/config/content/everyfeed/products/' . $product_search['pid']),
         check_plain($product_search['category_id'] == 0 ? t('All') : $cats[$product_search['category_id']]),
@@ -128,7 +130,7 @@ function everyfeed_admin_products($form_state) {
   }
 
   $form['productsearches'] = array(
-    '#markup' => theme('table', array('header' => $header, 'rows' => $rows, 'sticky' => true, array('class' => array('everyfeed-product-table'))))
+    '#markup' => theme('table', array('header' => $header, 'rows' => $rows, 'sticky' => TRUE, array('class' => array('everyfeed-product-table'))))
   );
   
   // No adding keywords without an API key
@@ -137,7 +139,7 @@ function everyfeed_admin_products($form_state) {
       '#type' => 'textfield',
       '#title' => t('Keyword'),
       '#size' => 40,
-      '#required' => true,
+      '#required' => TRUE,
       '#prefix' => '<div class="container-inline">',
     );
   
@@ -153,7 +155,8 @@ function everyfeed_admin_products($form_state) {
       '#value' => t('Add'),
       '#suffix' => '</div>'
     );
-  } else {
+  }
+  else {
     drupal_set_message(
       t('You must !link before adding any product keywords.',
       array('!link' => l(t('add your API key'), 'admin/config/content/everyfeed/settings'))),
@@ -195,7 +198,6 @@ function everyfeed_admin_product_remove($form, $form_state, $pid) {
  * @return void
  */
 function everyfeed_admin_product_remove_submit($form, &$form_state) {
-
   // Nuke all products which are related
   $nids = db_query("SELECT entity_id FROM {field_data_field_searchphraseid} WHERE bundle = 'ef_product' AND field_searchphraseid_value = :phraseid", array(':phraseid' => $form_state['values']['product_id']))->fetchCol();
   if (count($nids) > 0) node_delete_multiple($nids);
@@ -223,7 +225,7 @@ function everyfeed_admin_products_validate($form, $form_state) {
   $cats = everyfeed_get_category_list();
 
   // Make sure we already recognise the category  
-  if($form_state['values']['newproductcategory'] && !isset($cats[$form_state['values']['newproductcategory']])) {
+  if ($form_state['values']['newproductcategory'] && !isset($cats[$form_state['values']['newproductcategory']])) {
     form_set_error('newproductcategory', t('Category not recognised.'));
   }
 }
@@ -244,7 +246,7 @@ function everyfeed_admin_products_submit($form, $form_state) {
   
   // Store the search phrase
   $result = drupal_write_record('everyfeed_products', $entry);
- 	watchdog('everyfeed', 'phrase:' . print_r($entry, true), array(), WATCHDOG_DEBUG); // @debug
+  watchdog('everyfeed', 'phrase:' . print_r($entry, TRUE), array(), WATCHDOG_DEBUG); // @debug
 
   // Begin the importing of products matching the submitted search phrase 
   everyfeed_admin_product_add($entry['keyword'], $entry['category_id'], $entry['pid']);
@@ -308,15 +310,15 @@ function everyfeed_admin_product_update($phrase_id) {
  */
 function everyfeed_get_category_list() {
   $data = everyfeed_callapi('getmeta/category');
-	$categories = array();
+  $categories = array();
   
   if (isset($data['meta'])) {
-  	// Re-jig the array of categories so that the cat ID is the array key
-  	for ($i = 0; $i < count($data['meta']['category']); $i=$i+2) {
-    	$d = $data['meta']['category'][$i];
-  		$categories[$data['meta']['category'][$i+1]] = $data['meta']['category'][$i];
-  	}
-	}
+    // Re-jig the array of categories so that the cat ID is the array key
+    for ($i = 0; $i < count($data['meta']['category']); $i=$i+2) {
+      $d = $data['meta']['category'][$i];
+      $categories[$data['meta']['category'][$i+1]] = $data['meta']['category'][$i];
+    }
+  }
 
   return $categories;
 }
@@ -336,7 +338,7 @@ function everyfeed_get_merchant_list() {
     $data = everyfeed_callapi('getmeta/merchant');
     $merchants = array();
     
-    foreach($data['meta']['merchant'] as $merchant) {
+    foreach ($data['meta']['merchant'] as $merchant) {
       if (!is_numeric($merchant)) {
         $merchants[] = $merchant;
       }
@@ -369,9 +371,7 @@ function everyfeed_callapi($method) {
     if ($result->code == 200) {
       $values = drupal_json_decode($result->data);
       if (isset($values['everyFeed'])) {
-        $values = $values['everyFeed'];
-        
-        if ($values) {
+        if ($values = $values['everyFeed']) {
           cache_set($method, $values, 'cache', CACHE_TEMPORARY);
         }
       }
@@ -391,11 +391,10 @@ function everyfeed_callapi($method) {
  * @param mixed $form_id
  * @return void
  */
-function everyfeed_form_alter(&$form, &$form_state, $form_id)
-{
-  if($form_id == 'ef_product_node_form') {
-  	$form['#validate'][] = 'everyfeed_node_form_validate';
-	}
+function everyfeed_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'ef_product_node_form') {
+    $form['#validate'][] = 'everyfeed_node_form_validate';
+  }
 }
 
 
@@ -409,7 +408,7 @@ function everyfeed_form_alter(&$form, &$form_state, $form_id)
  */
 function everyfeed_node_form_validate($form, &$form_state) {
   if ($form_state['values']['field_productid']) {
-    $result = db_query("SELECT entity_id, revision_id FROM {field_data_field_productid} WHERE bundle = 'ef_product' AND field_productid_value = :productid", array(':productid' => $form_state['values']['field_productid']['und'][0]['value']));
+    $result = db_query("SELECT entity_id, revision_id FROM {field_data_field_productid} WHERE bundle = 'ef_product' AND field_productid_value = :productid", array(':productid' => $form_state['values']['field_productid'][LANGUAGE_NONE][0]['value']));
     if ($count = $result->rowCount()) {
       $nodes = $result->fetchAssoc();
       
@@ -420,8 +419,7 @@ function everyfeed_node_form_validate($form, &$form_state) {
         form_set_value($form['vid'], $nodes['revision_id'], $form_state);
         
         // Preserve some existing flags
-        $orig = node_load($nodes['entity_id'], $nodes['revision_id']);
-        if ($orig) {
+        if ($orig = node_load($nodes['entity_id'], $nodes['revision_id'])) {
           form_set_value($form['options']['status'], $orig->status, $form_state);       
           form_set_value($form['options']['promote'], $orig->promote, $form_state);
           form_set_value($form['options']['sticky'], $orig->sticky, $form_state);
@@ -430,7 +428,7 @@ function everyfeed_node_form_validate($form, &$form_state) {
           // Preserve any user selected bundle fields
           $updatefields = variable_get('everyfeed_updatefields', array('field_price'));
     
-          foreach($updatefields as $updatefield => $active) {
+          foreach ($updatefields as $updatefield => $active) {
             if ($updatefield === $active) {
               $f = $orig->$updatefield;
               $form_state['values'][$updatefield] = $f[LANGUAGE_NONE];
@@ -489,7 +487,7 @@ function everyfeed_admin_settings_form($form_state) {
   $entityfields = field_info_instances('node', 'ef_product');
   $updatefields = array('title' => t('Title'));
   
-  foreach($entityfields as $field) {
+  foreach ($entityfields as $field) {
     $updatefields[$field['field_name']] = $field['label'];
   }
   
