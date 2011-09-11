@@ -6,7 +6,7 @@
  * by Mike Carter ("budda", http://drupal.org/user/13164)
  */
  
-define('BATCH_PRODUCTS_PER_CHUNK', 50);
+define('BATCH_PRODUCTS_PER_CHUNK', 100);
 
 function everyfeed_batch_check($product, $category_id, &$context) {
 
@@ -47,15 +47,12 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
   if (empty($context['sandbox'])) {
     $context['finished'] = FALSE;
     $context['sandbox']['progress'] = 0;
-    $result = everyfeed_batch_check($product, $category_id, $context);
     
-    //!@todo fix me
+    $result = everyfeed_batch_check($product, $category_id, $context);
     if (!$result) {
       $context['finished'] = TRUE;
       return;
     }
-    
-    debug($context, 'context init');
   }
     
   // Filter the products by category if one is provided
@@ -71,7 +68,9 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
   $data = drupal_json_decode($result->data); $data = $data['everyFeed'];
   
   if ($data['status'] == 200) {
-    debug($data['products'], $url . ' total of ' . count($data['products']));
+
+    // How many products are in this batch? (might be less than BATCH_PRODUCTS_PER_CHUNK)
+    $batch_total = count($data['products']);
 
     foreach ($data['products'] as $row) {
       $context['results'][] = check_plain($row['title']);
@@ -80,7 +79,7 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
       $context['message'] = t('Adding product @progress-@chunklimit out of @max which includes "%product" !pic', array(
         '@progress' => $context['sandbox']['progress'],
         '@max' => $context['sandbox']['max'],
-        '@chunklimit' => $context['sandbox']['progress'] + BATCH_PRODUCTS_PER_CHUNK,
+        '@chunklimit' => $context['sandbox']['progress'] + $batch_total,
         '%product' => $row['title'],
         '!pic' => theme('image', array(
           'path' => $row['image_url'],
@@ -101,8 +100,6 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
     $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max']; //!@todo must return true
   }
-  
-  debug($context, 'context update');
 }
 
 
