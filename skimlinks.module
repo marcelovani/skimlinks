@@ -191,7 +191,7 @@ function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defa
  * @return void
  */
 function skimlinks_shorten_urls($text, $filter) {
-  $text = preg_replace_callback('/(http:\/\/(?:www\.)?[^"\s]*)/i', 'skimlinks_urlshortener', $text);
+  $text = preg_replace_callback('/((https|http):\/\/\.?[^"\s]*)/i', 'skimlinks_urlshortener', $text);
   return $text;
 }
 
