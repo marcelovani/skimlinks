@@ -6,7 +6,7 @@
  * by Mike Carter ("budda", http://drupal.org/user/13164)
  */
  
-define('BATCH_PRODUCTS_PER_CHUNK', 100);
+define('BATCH_PRODUCTS_PER_CHUNK', 150);
 
 function everyfeed_batch_check($product, $category_id, &$context) {
 
@@ -88,7 +88,7 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
           'title' => check_plain($row['title']),
           'attributes' => array('style' => 'vertical-align: text-top'))
         )
-      ));
+      )); //!@todo investigate why this message doesn't stay around for long on batch screen
       
       $row['searchphrase_id'] = $phrase_id;
       
@@ -98,7 +98,7 @@ function everyfeed_batch_process($product, $category_id, $phrase_id, &$context) 
   }
     
   if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
-    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max']; //!@todo must return true
+    $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
   }
 }
 
