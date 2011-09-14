@@ -88,20 +88,31 @@ function everyfeed_menu() {
  * @return void
  */
 function everyfeed_admin_categories_autocomplete($term) {
-  if ($term) {
+  if ($term) { 
     // Get our master category list
     $cats = everyfeed_get_category_list();
   
+    // Set up the search term
+    everyfeed_admin_category_filter($term, TRUE);
+  
     // Remove categories which don't match the search term
-    $cat_match = array_filter($cats, function($var) use($term) { return (stristr($var, $term)) ? TRUE : FALSE;} );
+    $cat_match = array_filter($cats, 'everyfeed_admin_category_filter');
   
     // Only show the first 10 matches
     $cat_match = array_slice($cat_match, 0, 10, TRUE);
   
     print drupal_json_encode($cat_match);
   }
+}
 
-  exit;
+function everyfeed_admin_category_filter($var, $term = FALSE) {
+  static $searchterm;
+  if ($term) {
+    $searchterm = $var;
+    return;
+  }
+
+  return (stristr($var, $searchterm)) ? TRUE : FALSE;
 }
 
  
