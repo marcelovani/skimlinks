@@ -209,19 +209,64 @@ function everyfeed_admin_product_remove($form, $form_state, $pid) {
  * @return void
  */
 function everyfeed_admin_product_remove_submit($form, &$form_state) {
+
+
+
   // Nuke all products which are related
-  $nids = db_query("SELECT entity_id FROM {field_data_field_searchphraseid} WHERE bundle = 'ef_product' AND field_searchphraseid_value = :phraseid", array(':phraseid' => $form_state['values']['product_id']))->fetchCol();
-  if (count($nids) > 0) node_delete_multiple($nids);
+  $allnids = db_query("SELECT entity_id FROM {field_data_field_searchphraseid} WHERE bundle = 'ef_product' AND field_searchphraseid_value = :phraseid", array(':phraseid' => $form_state['values']['product_id']))->fetchCol();
+
+  if (count($allnids) > 0) {
+
+    $operations = array();
+
+    // Doing an empty operation at the beginning makes the "initialization"
+    // phase go quickly
+    $operations[] = array('trim', array(''));
+
+    $count = 0;
+    foreach ($allnids as $nid) {
+      $nids[] = $nid;
+      ++$count;
+      if ($count % 100 === 1) {
+        $operations[] = array('node_delete_multiple', array($nids));
+        $nids = array();
+      }
+    }
+    
+    // Add remaining nids.
+    $operations[] = array('node_delete_multiple', array($nids));
+    $operations[] = array('everyfeed_batch_node_delete_complete', array($form_state['values']['product_id']));
+    
+    // Clear the cache once at the end.
+    $operations[] = array('cache_clear_all', array());
+    
+    // How many operations are we going to do?
+    $opcount = count($operations);
+
+    // Set up the Batch API
+    $batch = array(
+      'operations' => $operations,
+      'finished' => '',
+      'title' => t('Deleting !count products in !count2 operations.', array('!count' => $count, '!count2' => $opcount)),
+    );
+    batch_set($batch);
+    batch_process();
+  }
   
-  // Nuke row from database
-  db_delete('everyfeed_products')
-    ->condition('pid', $form_state['values']['product_id'])
-    ->execute();
+  
+
   
   $form_state['redirect'] = 'admin/config/content/everyfeed'; 
 }
  
- 
+function everyfeed_batch_node_delete_complete($pid) {
+  // Nuke row from database
+  db_delete('everyfeed_products')
+    ->condition('pid', $pid)
+    ->execute();
+}
+
+
 
 /**
  * Make sure new product additions are valid
