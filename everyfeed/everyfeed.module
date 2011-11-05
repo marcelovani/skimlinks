@@ -218,7 +218,8 @@ function everyfeed_admin_product_remove_submit($form, &$form_state) {
   if (count($allnids) > 0) {
 
     $operations = array();
-
+    $nids = array();
+    
     // Doing an empty operation at the beginning makes the "initialization"
     // phase go quickly
     $operations[] = array('trim', array(''));
@@ -247,25 +248,28 @@ function everyfeed_admin_product_remove_submit($form, &$form_state) {
     $batch = array(
       'operations' => $operations,
       'finished' => '',
-      'title' => t('Deleting !count products in !count2 operations.', array('!count' => $count, '!count2' => $opcount)),
+      'title' => t('Deleting !count products in !opcount operations.', array('!count' => $count, '!opcount' => $opcount)),
     );
     batch_set($batch);
     batch_process();
   }
   
-  
-
-  
   $form_state['redirect'] = 'admin/config/content/everyfeed'; 
 }
- 
+
+
+/**
+ * Remove the product id from the database.
+ * 
+ * @access public
+ * @param mixed $pid
+ * @return void
+ */
 function everyfeed_batch_node_delete_complete($pid) {
-  // Nuke row from database
   db_delete('everyfeed_products')
     ->condition('pid', $pid)
     ->execute();
 }
-
 
 
 /**
@@ -285,6 +289,7 @@ function everyfeed_admin_products_validate($form, $form_state) {
     form_set_error('newproductcategory', t('Category not recognised.'));
   }
 }
+
 
 /**
  * Add a new product range as nodes
@@ -337,7 +342,13 @@ function everyfeed_admin_product_add($product, $category, $phrase_id) {
 }
 
 
-
+/**
+ * Batch process to update existing product node fields
+ * 
+ * @access public
+ * @param mixed $phrase_id
+ * @return void
+ */
 function everyfeed_admin_product_update($phrase_id) {
   $search = db_query("SELECT keyword, category_id FROM {everyfeed_products} WHERE pid = :phraseid", array(':phraseid' => $phrase_id));
   $record = $search->fetchObject();
