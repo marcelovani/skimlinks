@@ -194,6 +194,9 @@ function everyfeed_clean_title($title) {
     array(']', '[')
   );
 
+  // Title cannot be over 255 characters (set in node.module)
+  $title = drupal_substr($title, 0, 255);
+
   foreach ($bad as $char) {
     if ($closebracket = stripos($title, $char[0]) != FALSE) {
       if ($openbracket = stripos($title, $char[1]) == FALSE) {
@@ -201,6 +204,8 @@ function everyfeed_clean_title($title) {
       }
     }
   }
+  
+  
   
   return $title;
 }
