@@ -209,9 +209,6 @@ function everyfeed_admin_product_remove($form, $form_state, $pid) {
  * @return void
  */
 function everyfeed_admin_product_remove_submit($form, &$form_state) {
-
-
-
   // Nuke all products which are related
   $allnids = db_query("SELECT entity_id FROM {field_data_field_searchphraseid} WHERE bundle = 'ef_product' AND field_searchphraseid_value = :phraseid", array(':phraseid' => $form_state['values']['product_id']))->fetchCol();
 
@@ -228,7 +225,7 @@ function everyfeed_admin_product_remove_submit($form, &$form_state) {
     foreach ($allnids as $nid) {
       $nids[] = $nid;
       ++$count;
-      if ($count % 100 === 1) {
+      if ($count % 10 === 1) {
         $operations[] = array('node_delete_multiple', array($nids));
         $nids = array();
       }
@@ -239,7 +236,7 @@ function everyfeed_admin_product_remove_submit($form, &$form_state) {
     $operations[] = array('everyfeed_batch_node_delete_complete', array($form_state['values']['product_id']));
     
     // Clear the cache once at the end.
-    $operations[] = array('cache_clear_all', array());
+    $operations[] = array('cache_clear_all');
     
     // How many operations are we going to do?
     $opcount = count($operations);
@@ -247,14 +244,12 @@ function everyfeed_admin_product_remove_submit($form, &$form_state) {
     // Set up the Batch API
     $batch = array(
       'operations' => $operations,
-      'finished' => '',
+      'finished' => 'everyfeed_batch_delete_finished',
       'title' => t('Deleting !count products in !opcount operations.', array('!count' => $count, '!opcount' => $opcount)),
     );
     batch_set($batch);
     batch_process();
   }
-  
-  $form_state['redirect'] = 'admin/config/content/everyfeed'; 
 }
 
 
@@ -269,6 +264,11 @@ function everyfeed_batch_node_delete_complete($pid) {
   db_delete('everyfeed_products')
     ->condition('pid', $pid)
     ->execute();
+}
+
+
+function everyfeed_batch_delete_finished($success, $results, $operations) {
+  drupal_goto('admin/config/content/everyfeed');
 }
 
 
