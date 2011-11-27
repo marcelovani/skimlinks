@@ -28,7 +28,7 @@ function skimlinks_admin_settings_form($form_state) {
     '#description' => t('This ID is unique to each site you want to affiliate your links on, and is in the form of XXXXxYYYYYY. To get a Web Property ID
                         !skimreg, or if you already have registered your site, go to your Skimlinks !managesites page to see the ID next to your domain. !webpropertyid.',
                         array(
-                          '!skimreg' => l(t('register your site with Skimlinks'), 'http://www.skimlinks.com/register'),
+                          '!skimreg' => l(t('register your site with Skimlinks'), 'http://skimlinks.me/pkVSFl'),
                           '!managesites' => l(t('Manage sites'), 'https://accounts.skimlinks.com/sites'),
                           '!webpropertyid' => l(t('Find more information in the documentation'), 'https://accounts.skimlinks.com/support'),
                         )
