@@ -10,7 +10,7 @@
  * Implements hook_menu().
  */
 function skimlinks_menu() {
-  $items['admin/config/system/skimlinks'] = array(
+  $items['admin/config/services/skimlinks'] = array(
     'title' => 'Skimlinks',
     'description' => 'Enabling affiliate marketing using the Skimlinks API service.',
     'page callback' => 'drupal_get_form',
