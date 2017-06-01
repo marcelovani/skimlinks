@@ -41,7 +41,9 @@ function skimlinks_permission() {
  * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
  */
 function skimlinks_page_alter(&$page) {
-  global $user;
+  if (path_is_admin(current_path())) {
+    return;
+  }
 
   if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
   
