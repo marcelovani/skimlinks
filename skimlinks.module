@@ -70,7 +70,8 @@ function skimlinks_block_view($delta = '') {
   switch ($delta) {
     case 'disclosurebadge':
       if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
-        $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( explode( 'x', $publisher_id ) ) . '&amp;d=' . end( explode( 'x', $publisher_id ) ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
+        $publisher_id = explode( 'x', $publisher_id );
+        $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( $publisher_id ) . '&amp;d=' . end( $publisher_id ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
       }
       else {
         $content = t('You need to set your sites !publisherid first.', array('!publisherid' => l(t('Publisher ID'), 'admin/config/system/skimlinks')));
