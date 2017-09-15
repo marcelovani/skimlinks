@@ -1,224 +1,35 @@
 <?php
-/**
- * @file
- * Skimlinks affiliate marketing service
- *
- * by Mike Carter ("budda", http://drupal.org/user/13164)
- */
 
-/**
- * Implements hook_menu().
- */
-function skimlinks_menu() {
-  $items['admin/config/services/skimlinks'] = array(
-    'title' => 'Skimlinks',
-    'description' => 'Enabling affiliate marketing using the Skimlinks API service.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('skimlinks_admin_settings_form'),
-    'access arguments' => array('administer skimlinks'),
-    'type' => MENU_NORMAL_ITEM,
-    'file' => 'skimlinks.admin.inc',
-  );
+function skimlinks_page_bottom(array &$page_bottom) {
+  $config = \Drupal::config('skimlinks.settings');
+  $id = $config->get('account');
 
-  return $items;
-}
-
-
-/**
- * Implements hook_permission().
- */
-function skimlinks_permission() {
-  return array(
-    'administer skimlinks' => array(
-      'title' => t('Administer Skimlinks'),
-      'description' => t('Perform maintenance tasks for Skimlinks.'),
-    )
-  );
-}
-
-
-/**
- * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
- */
-function skimlinks_page_alter(&$page) {
-  if (path_is_admin(current_path())) {
-    return;
-  }
-
-  if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
-  
-    if ($subdomain = variable_get('skimlinks_subdomain', FALSE)) {
-      drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
-    }
-    
-    drupal_add_js("http://s.skimresources.com/js/{$publisher_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
+  if (!empty($id) && !_skimlinks_is_admin_page()) {
+    $page_bottom['skimlinks'] = [
+      '#type' => 'html_tag',
+      '#tag' => 'script',
+      '#value' => '',
+      '#attributes' => array('src' => "//s.skimresources.com/js/{$id}.skimlinks.js"),
+    ];
   }
 }
 
-
-function skimlinks_block_info() {
-  return array(
-    'disclosurebadge' => array(
-      'info' => t('A user selectable Skimlinks usage disclosure badge.'),
-      'cache' => DRUPAL_CACHE_GLOBAL,
-    )
-  );
-}
-
-
-function skimlinks_block_view($delta = '') {
-  $block = array();
-
-  switch ($delta) {
-    case 'disclosurebadge':
-      if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
-        $publisher_id = explode( 'x', $publisher_id );
-        $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( $publisher_id ) . '&amp;d=' . end( $publisher_id ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
-      }
-      else {
-        $content = t('You need to set your sites !publisherid first.', array('!publisherid' => l(t('Publisher ID'), 'admin/config/system/skimlinks')));
-      }
-      
-      $block = array(
-        'subject' => '',
-        'content' => $content
-      );
-      
-      break;
+/**
+ * Checks for admin pages or node edit pages
+ * @return  bool  Returns TRUE for admin pages
+ */
+function _skimlinks_is_admin_page() {
+  // Admin
+  $route = \Drupal::routeMatch()->getRouteObject();
+  if (\Drupal::service('router.admin_context')->isAdminRoute($route)) {
+    return TRUE;
   }
 
-  return $block;
-}
-
-
-/**
- * Implements hook_block_configure().
- */
-function skimlinks_block_configure($delta = '') {
-  $form = array();
-
-  switch ($delta) {
-    case 'disclosurebadge':
-      $form['badge'] = array(
-        '#type' => 'fieldgroup',
-        '#title' => t('Badge')
-      );
-      
-      for ($count = 1; $count <=5; $count++) {
-        $options[$count] = theme('image', array(
-        'path' => 'https://accounts.skimlinks.com/img/referral/button_' . $count . '.gif',
-        'title' => t('Disclosure badge style ' . $count),
-        'alt' => t('Image of a disclosure badge style ' . $count)
-        ));
-      }
-      
-      $form['badge']['skimlinks_disclosurebadge'] = array(
-        '#type' => 'radios',
-        '#title' => t('Style'),
-        '#default_value' => variable_get('skimlinks_disclosurebadge', 1),
-        '#options' => $options,
-        '#description' => t("Select a style of badge that best fits with your site design colours."),
-      );
-    break;
+  // Node edit
+  $current_path = \Drupal::service('path.current')->getPath();
+  if (preg_match('/node\/(\d+)\/edit/', $current_path, $matches)) {
+    return TRUE;
   }
 
-  return $form;
-}
-
-
-/**
- * Implements hook_block_save().
- */
-function skimlinks_block_save($delta = '', $edit = array()) {
-  switch ($delta) {
-    case 'disclosurebadge':
-      variable_set('skimlinks_disclosurebadge', (int) $edit['skimlinks_disclosurebadge']);
-      break;
-  }
-}
-
-
-/**
- * Implements hook_filter_info().
- *
- * Provide Skimlinks url filter.
- */
-function skimlinks_filter_info() {
-  $filters['skimlinks'] = array(
-    'title' => t('Skimlinks'),
-    'description' => t('Converts links to recognised merchants in to shortened affiliated links.'),
-    'process callback' => 'skimlinks_shorten_urls',
-    'settings callback' => '_skimlinks_filter_settings',
-    'cache' => TRUE,
-  );
-  return $filters;
-}
-
-
-/**
- * Allow admins to select the type of short url
- * 
- * @access private
- * @param mixed $form
- * @param mixed &$form_state
- * @param mixed $filter
- * @param mixed $format
- * @param mixed $defaults
- * @return void
- */
-function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defaults) {
-  $filter->settings += $defaults;
-
-  $settings['filter_skimlink_host'] = array(
-    '#type' => 'select',
-    '#title' => t('URL Prefix'),
-    '#default_value' => 'buyth.at',
-    '#options' => array(
-      'buyth.at' => 'BuyTh.at',
-      'getth.at' => 'GetTh.at',
-      'useth.at' => 'UseTh.at',
-      'tryth.at' => 'TryTh.at',
-    ),
-    '#description' => t('Your link will be, for example, http://buyth.at/gsca5'),
-  );
-  return $settings;
-}
-
-
-/**
- * Find all urls in the node field content and get them shortened
- * 
- * @access public
- * @param mixed $text
- * @param mixed $filter
- * @return void
- */
-function skimlinks_shorten_urls($text, $filter) {
-  $text = preg_replace_callback('/((https|http):\/\/\.?[^"\s]*)/i', 'skimlinks_urlshortener', $text);
-  return $text;
-}
-
-
-/**
- * Call the Skimlinks API to generate a short affiliated url from our source url
- * 
- * @access public
- * @param mixed $url
- * @return void
- */
-function skimlinks_urlshortener($url) {
-  $id = variable_get('skimlinks_publisherid', FALSE);
-  $publisher_id = current( explode( 'x', $id ));
-  $host = variable_get('filter_skimlink_host', 'buyth.at');
-  
-  $url = $url[1];
-
-  $shortener = drupal_http_request('https://accounts.skimlinks.com/shorturl_ajax.php?url=' . $url . '&host=' . $host . '&pubid=' . $publisher_id);
-  if ($shortener->code == 200) {
-    $tinyurl = array();
-    preg_match('/(http:\/\/' . $host . '\/[a-zA-Z0-9]*)/', $shortener->data, $tinyurl);
-    return $tinyurl[0];
-  }
-  
   return FALSE;
 }

@@ -1,0 +1,45 @@
+<?php
+
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_install().
+ *
+ * Prompt user to configure the module on install.
+ */
+function skimlinks_install() {
+	$config_link = \Drupal::l(t('Please configure the Skimlinks module.'), \Drupal\Core\Url::fromRoute('skimlinks.admin_settings_form'));
+  drupal_set_message($config_link);
+}
+
+/**
+ * Implements hook_requirements().
+ */
+function skimlinks_requirements($phase) {
+	$requirements = [];
+
+  if ($phase == 'runtime') {
+    $config = \Drupal::config('skimlinks.settings');
+    
+    // Raise warning if SiteID has not been set yet.
+    if (empty($config->get('account'))) {
+      $requirements['skimlinks_account'] = [
+        'title' => t('Skimlinks module'),
+        'description' => t('Skimlinks module has not been configured yet. Please configure its settings from the <a href=":url">Skimlinks settings page</a>.', [':url' => Url::fromRoute('skimlinks.admin_settings_form')->toString()]),
+        'severity' => REQUIREMENT_WARNING,
+        'value' => t('Not configured'),
+      ];
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Remove script when module is uninstalled.
+ */
+function skimlinks_uninstall() {
+  _drupal_flush_css_js();
+}
