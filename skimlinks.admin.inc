@@ -43,7 +43,12 @@ function skimlinks_admin_settings_form($form_state) {
     '#type' => 'textfield',
     '#field_prefix' => 'http://',
     '#default_value'  => variable_get('skimlinks_subdomain', 'go.redirectingat.com'),
-    '#description' => t('You may use a custom subdomain to redirect your affiliated links through rather than the default go.redirectingat.com. For more information please see the !customredirect', array('!customredirect' => l(t('Skimlinks redirect help'), 'https://accounts.skimlinks.com/customdomain')))
+    '#description' => t(
+      'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Visit the !settings page for more details.', 
+      array(
+        '!settings' => l(t('Skimlinks Advanced Settings'), 'https://hub.skimlinks.com/setup/settings', array('attributes' =>array('target' => ' _blank')))
+      )
+    )
   );
 
   return system_settings_form($form);
