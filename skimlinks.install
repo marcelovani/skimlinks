@@ -15,3 +15,27 @@ function skimlinks_install() {
 	$config_link = l(t('Please configure the Skimlinks module.'), 'admin/config/services/skimlinks');
   drupal_set_message($config_link);
 }
+
+/**
+ * Implements hook_requirements().
+ */
+function skimlinks_requirements($phase) {
+	$requirements = [];
+
+  if ($phase == 'runtime') {
+    // Raise warning if SiteID has not been set yet.
+    if (empty(variable_get('skimlinks_publisherid'))) {
+      $requirements['skimlinks_publisherid'] = [
+        'title' => t('Skimlinks module'),
+        'description' => t(
+        	'Skimlinks module has not been configured yet. Please configure its settings from the !config.',
+        	array('!config' => l(t('Skimlinks settings page'), 'admin/config/services/skimlinks'))
+        ),
+        'severity' => REQUIREMENT_WARNING,
+        'value' => t('Not configured'),
+      ];
+    }
+  }
+
+  return $requirements;
+}
