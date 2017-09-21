@@ -11,6 +11,7 @@
 
 /**
  * Implements hook_admin_settings() for module settings configuration.
+ * @todo rename "skimlinks_publisherid" variable to skimlinks_domainid
  */
 function skimlinks_admin_settings_form($form_state) {
   $form['account'] = array(
@@ -48,10 +49,16 @@ function skimlinks_admin_settings_form($form_state) {
   return system_settings_form($form);
 }
 
-
+/**
+ * Validates the Skimlinks admin form.
+ * @todo Improve domain id validation.
+ */
 function skimlinks_admin_settings_form_validate($form, &$form_state) {
-  // Ensure the ID is always all in lowercase
-  form_set_value($form['account']['skimlinks_publisherid'], drupal_strtolower($form_state['values']['skimlinks_publisherid']), $form_state);
+  // Ensure the skimlinks account consist of only numbers and letters
+  if (!preg_match('/^[a-zA-Z0-9]*$/', $form_state['values']['skimlinks_publisherid'])) {
+    form_set_error('skimlinks_publisherid', 'A valid Domain ID should have the following format: 000000X000000');
+    return FALSE;
+  }
 
   if ($form_state['values']['skimlinks_subdomain']) {
   
