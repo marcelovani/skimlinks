@@ -1,0 +1,17 @@
+<?php
+
+/**
+ * @file
+ * Install, requirements, and uninstall functionsfor the Skimlinks 
+ * module.
+ */
+
+/**
+ * Implements hook_install().
+ *
+ * Prompt user to configure the module on install.
+ */
+function skimlinks_install() {
+	$config_link = l(t('Please configure the Skimlinks module.'), 'admin/config/services/skimlinks');
+  drupal_set_message($config_link);
+}
