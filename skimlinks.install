@@ -39,3 +39,10 @@ function skimlinks_requirements($phase) {
 
   return $requirements;
 }
+
+/**
+ * Implements hook_uninstall().
+ */
+function skimlinks_uninstall() {
+	drupal_clear_js_cache();
+}
