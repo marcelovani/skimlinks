@@ -2,7 +2,7 @@
 
 function skimlinks_page_bottom(array &$page_bottom) {
   $config = \Drupal::config('skimlinks.settings');
-  $id = $config->get('account');
+  $id = $config->get('domainid');
 
   if (!empty($id) && !_skimlinks_is_admin_page()) {
     $page_bottom['skimlinks'] = [

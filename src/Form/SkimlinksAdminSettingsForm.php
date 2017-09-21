@@ -38,30 +38,37 @@ class SkimlinksAdminSettingsForm extends ConfigFormBase {
       '#open' => TRUE,
 	  );
 
-  	$form['account']['skimlinks_account'] = [
-      '#default_value' => $config->get('account'),
+  	$form['account']['skimlinks_domainid'] = [
+      '#default_value' => $config->get('domainid'),
       '#description' => $this->t(
-      	'This ID is unique to each site you want to affiliate your links on, and is in the form of 123456X1234567. To get a SiteID <a href=":skimreg">register your site with Skimlinks</a>, or if you already have registered your site, go to your Skimlinks <a href=":managesites">Manage sites</a> page to see the ID next to your domain. <a href=":documentation">Find more information in the documentation</a>', 
+        'This ID is unique to each site you affiliate with Skimlinks. Get your Domain ID on the <a href=":hub" target="_blank">Skimlinks Hub</a>. If you don\'t have a Skimlinks account you can apply for one <a href=":apply" target="_blank">here</a>.',
       	[
-      		':skimreg' => Url::fromUri('https://signup.skimlinks.com')->toString(),
-      		':managesites' => Url::fromUri('https://hub.skimlinks.com/account')->toString(),
-      		':documentation' => Url::fromUri('https://hub.skimlinks.com/support')->toString(),
+      		':hub' => Url::fromUri('https://hub.skimlinks.com/setup/install')->toString(),
+      		':apply' => Url::fromUri('https://signup.skimlinks.com')->toString(),
       	]
      	),
       '#maxlength' => 20,
       // '#placeholder' => 'UA-',
       '#required' => TRUE,
       '#size' => 15,
-      '#title' => $this->t('SiteID'),
+      '#title' => $this->t('Domain ID'),
       '#type' => 'textfield',
+      '#attributes' => array(
+        'placeholder' => t('000000X000000'),
+      ),
     ];
    
    return parent::buildForm($form, $form_state);
   }
 
+  /**
+   * {@inheritdoc}
+   * @todo Improve domain id validation.
+   */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    if (!preg_match('/^[a-zA-Z0-9]*$/', $form_state->getValue('skimlinks_account'))) {
-      $form_state->setErrorByName('skimlinks_account', t('A valid SiteID can contain only letters and numbers.'));
+    // Ensure the skimlinks domainid consist of only numbers and letters
+    if (!preg_match('/^[a-zA-Z0-9]*$/', $form_state->getValue('skimlinks_domainid'))) {
+      $form_state->setErrorByName('skimlinks_domainid', t('A valid Domain ID should have the following format: 000000X000000'));
       return FALSE;
     }
   }
@@ -72,7 +79,7 @@ class SkimlinksAdminSettingsForm extends ConfigFormBase {
   public function submitForm(array &$form, FormStateInterface $form_state) {
     $config = $this->config('skimlinks.settings');
     $config
-    	->set('account', $form_state->getValue('skimlinks_account'))
+    	->set('domainid', $form_state->getValue('skimlinks_domainid'))
     	->save();
 
 	  _drupal_flush_css_js();

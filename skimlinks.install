@@ -1,5 +1,11 @@
 <?php
 
+/**
+ * @file
+ * Install, requirements, and uninstall functionsfor the Skimlinks 
+ * module.
+ */
+
 use Drupal\Core\Url;
 
 /**
@@ -22,8 +28,8 @@ function skimlinks_requirements($phase) {
     $config = \Drupal::config('skimlinks.settings');
     
     // Raise warning if SiteID has not been set yet.
-    if (empty($config->get('account'))) {
-      $requirements['skimlinks_account'] = [
+    if (empty($config->get('domainid'))) {
+      $requirements['skimlinks_domainid'] = [
         'title' => t('Skimlinks module'),
         'description' => t('Skimlinks module has not been configured yet. Please configure its settings from the <a href=":url">Skimlinks settings page</a>.', [':url' => Url::fromRoute('skimlinks.admin_settings_form')->toString()]),
         'severity' => REQUIREMENT_WARNING,
