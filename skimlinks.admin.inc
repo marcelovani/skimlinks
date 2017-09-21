@@ -21,19 +21,19 @@ function skimlinks_admin_settings_form($form_state) {
 
   $form['account']['skimlinks_publisherid'] = array(
     '#title' => t('Domain ID'),
-    '#attributes' => array(
-      'placeholder' => t('000000X000000'),
-    ),
     '#type' => 'textfield',
     '#default_value' => variable_get('skimlinks_publisherid', ''),
     '#size' => 15,
     '#maxlength' => 20,
     '#required' => TRUE,
+    '#attributes' => array(
+      'placeholder' => t('000000X000000'),
+    ),
     '#description' => t(
       'This ID is unique to each site you affiliate with Skimlinks. Get your Domain ID on the !hub. If you don\'t have a Skimlinks account you can apply for one !apply.',
       array(
         '!hub' => l(t('Skimlinks Hub'), 'https://hub.skimlinks.com/setup/install', array('attributes' => array('target' => ' _blank'))),
-        '!apply' => l(t('here'), 'https://signup.skimlinks.com/', array('attributes' => array('target' => ' _blank'))),
+        '!apply' => l(t('here'), 'https://signup.skimlinks.com', array('attributes' => array('target' => ' _blank'))),
       )
     )
   );
