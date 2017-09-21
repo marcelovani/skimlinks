@@ -45,13 +45,13 @@ function skimlinks_page_alter(&$page) {
     return;
   }
 
-  if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
+  if ($domain_id = variable_get('skimlinks_publisherid', FALSE)) {
   
     if ($subdomain = variable_get('skimlinks_subdomain', FALSE)) {
       drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
     }
     
-    drupal_add_js("http://s.skimresources.com/js/{$publisher_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
+    drupal_add_js("http://s.skimresources.com/js/{$domain_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
   }
 }
 
@@ -71,12 +71,12 @@ function skimlinks_block_view($delta = '') {
 
   switch ($delta) {
     case 'disclosurebadge':
-      if ($publisher_id = variable_get('skimlinks_publisherid', FALSE)) {
-        $publisher_id = explode( 'x', $publisher_id );
-        $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( $publisher_id ) . '&amp;d=' . end( $publisher_id ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
+      if ($domain_id = variable_get('skimlinks_publisherid', FALSE)) {
+        $domain_id = explode( 'x', $domain_id );
+        $content = '<script class="skimlinks_ref_script" type="text/javascript" src="http://static.skimlinks.com/api/ref.js?p=' . current( $domain_id ) . '&amp;d=' . end( $domain_id ) . '&amp;t=' . variable_get('skimlinks_disclosurebadge', 1) . '"></script>';
       }
       else {
-        $content = t('You need to set your sites !publisherid first.', array('!publisherid' => l(t('Publisher ID'), 'admin/config/system/skimlinks')));
+        $content = t('You need to set your sites !domainid first.', array('!domainid' => l(t('domain ID'), 'admin/config/system/skimlinks')));
       }
       
       $block = array(
@@ -208,12 +208,12 @@ function skimlinks_shorten_urls($text, $filter) {
  */
 function skimlinks_urlshortener($url) {
   $id = variable_get('skimlinks_publisherid', FALSE);
-  $publisher_id = current( explode( 'x', $id ));
+  $domain_id = current( explode( 'x', $id ));
   $host = variable_get('filter_skimlink_host', 'buyth.at');
   
   $url = $url[1];
 
-  $shortener = drupal_http_request('https://accounts.skimlinks.com/shorturl_ajax.php?url=' . $url . '&host=' . $host . '&pubid=' . $publisher_id);
+  $shortener = drupal_http_request('https://accounts.skimlinks.com/shorturl_ajax.php?url=' . $url . '&host=' . $host . '&pubid=' . $domain_id);
   if ($shortener->code == 200) {
     $tinyurl = array();
     preg_match('/(http:\/\/' . $host . '\/[a-zA-Z0-9]*)/', $shortener->data, $tinyurl);

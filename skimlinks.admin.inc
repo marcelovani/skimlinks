@@ -19,20 +19,22 @@ function skimlinks_admin_settings_form($form_state) {
   );
 
   $form['account']['skimlinks_publisherid'] = array(
-    '#title' => t('Publisher ID'),
+    '#title' => t('Domain ID'),
+    '#attributes' => array(
+      'placeholder' => t('000000X000000'),
+    ),
     '#type' => 'textfield',
     '#default_value' => variable_get('skimlinks_publisherid', ''),
     '#size' => 15,
     '#maxlength' => 20,
     '#required' => TRUE,
-    '#description' => t('This ID is unique to each site you want to affiliate your links on, and is in the form of XXXXxYYYYYY. To get a Web Property ID
-                        !skimreg, or if you already have registered your site, go to your Skimlinks !managesites page to see the ID next to your domain. !webpropertyid.',
-                        array(
-                          '!skimreg' => l(t('register your site with Skimlinks'), 'http://skimlinks.me/pkVSFl'),
-                          '!managesites' => l(t('Manage sites'), 'https://accounts.skimlinks.com/sites'),
-                          '!webpropertyid' => l(t('Find more information in the documentation'), 'https://accounts.skimlinks.com/support'),
-                        )
-                      )
+    '#description' => t(
+      'This ID is unique to each site you affiliate with Skimlinks. Get your Domain ID on the !hub. If you don\'t have a Skimlinks account you can apply for one !apply.',
+      array(
+        '!hub' => l(t('Skimlinks Hub'), 'https://hub.skimlinks.com/setup/install', array('attributes' => array('target' => ' _blank'))),
+        '!apply' => l(t('here'), 'https://signup.skimlinks.com/', array('attributes' => array('target' => ' _blank'))),
+      )
+    )
   );
 
   $form['account']['skimlinks_subdomain'] = array(
