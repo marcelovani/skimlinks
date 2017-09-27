@@ -147,17 +147,18 @@ function skimlinks_block_save($delta = '', $edit = array()) {
  * Implements hook_filter_info().
  *
  * Provide Skimlinks url filter.
+ * @todo The filter isn't working correctly at the moment.
  */
-function skimlinks_filter_info() {
-  $filters['skimlinks'] = array(
-    'title' => t('Skimlinks'),
-    'description' => t('Converts links to recognised merchants in to shortened affiliated links.'),
-    'process callback' => 'skimlinks_shorten_urls',
-    'settings callback' => '_skimlinks_filter_settings',
-    'cache' => TRUE,
-  );
-  return $filters;
-}
+// function skimlinks_filter_info() {
+//   $filters['skimlinks'] = array(
+//     'title' => t('Skimlinks'),
+//     'description' => t('Converts links to recognised merchants in to shortened affiliated links.'),
+//     'process callback' => 'skimlinks_shorten_urls',
+//     'settings callback' => '_skimlinks_filter_settings',
+//     'cache' => TRUE,
+//   );
+//   return $filters;
+// }
 
 
 /**
