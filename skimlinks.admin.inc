@@ -50,6 +50,10 @@ function skimlinks_admin_settings_form($form_state) {
     )
   );
 
+  // Custom submit handler must be defined as system_settings_form()
+  // adds its own.
+  $form['#submit'][] = 'skimlinks_admin_settings_form_submit';
+
   return system_settings_form($form);
 }
 
@@ -58,6 +62,7 @@ function skimlinks_admin_settings_form($form_state) {
  * @todo Improve domain id validation.
  */
 function skimlinks_admin_settings_form_validate($form, &$form_state) {
+
   $publisher_id = &$form_state['values']['skimlinks_publisherid'];
 
   // Trim whitespace
@@ -100,4 +105,13 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
   else {
     form_set_value($form['account']['skimlinks_subdomain'], 'https://go.redirectingat.com', $form_state);
   }
+}
+
+/**
+ * Actions on submission of the skimlinks form.
+ */
+function skimlinks_admin_settings_form_submit($form, &$form_state) {
+  // Clear the javascript cache so the settings are applied
+  // immediately.
+  drupal_clear_js_cache();
 }
