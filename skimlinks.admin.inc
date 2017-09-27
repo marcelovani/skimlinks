@@ -52,7 +52,7 @@ function skimlinks_admin_settings_form($form_state) {
 
   // Custom submit handler must be defined as system_settings_form()
   // adds its own.
-  $form['#submit'][] = 'skimlinks_admin_settings_form_submit';
+  $form['#submit'] = array('skimlinks_admin_settings_form_submit');
 
   return system_settings_form($form);
 }
