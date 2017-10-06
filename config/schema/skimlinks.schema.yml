@@ -5,3 +5,6 @@ skimlinks.settings:
     domainid:
       type: string
       label: 'Domain ID'
+    subdomain:
+      type: string
+      label: 'Custom redirection sub domain'

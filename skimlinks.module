@@ -3,9 +3,24 @@
 function skimlinks_page_bottom(array &$page_bottom) {
   $config = \Drupal::config('skimlinks.settings');
   $id = $config->get('domainid');
+  $subdomain = $config->get('subdomain');
 
   if (!empty($id) && !_skimlinks_is_admin_page()) {
-    $page_bottom['skimlinks'] = [
+    if (!empty($subdomain)) {
+      // Remove http:// or https://
+      foreach (array('http://', 'https://') as $protocol) {
+        $subdomain = str_replace($protocol, '', $subdomain);
+      }
+      $page_bottom['skimlinks_subdomain'] = [
+        '#type' => 'markup',
+        '#children' => "<script
+  <!--//--><![CDATA[//><!--
+    var skimlinks_domain = '{$subdomain}';
+  //--><!]]>
+</script>",
+      ];
+    }
+    $page_bottom['skimlinks_domainid'] = [
       '#type' => 'html_tag',
       '#tag' => 'script',
       '#value' => '',
@@ -16,7 +31,7 @@ function skimlinks_page_bottom(array &$page_bottom) {
 
 /**
  * Checks for admin pages or node edit pages
- * @return  bool  Returns TRUE for admin pages
+ * @return  bool  TRUE for admin pages
  */
 function _skimlinks_is_admin_page() {
   // Admin
