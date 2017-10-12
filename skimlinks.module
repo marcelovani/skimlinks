@@ -11,9 +11,10 @@ function skimlinks_page_bottom(array &$page_bottom) {
       foreach (array('http://', 'https://') as $protocol) {
         $subdomain = str_replace($protocol, '', $subdomain);
       }
+      // Add the variable
       $page_bottom['skimlinks_subdomain'] = [
         '#type' => 'markup',
-        '#children' => "<script
+        '#children' => "<script>
   <!--//--><![CDATA[//><!--
     var skimlinks_domain = '{$subdomain}';
   //--><!]]>
