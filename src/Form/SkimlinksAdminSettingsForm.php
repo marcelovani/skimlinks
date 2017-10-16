@@ -62,7 +62,7 @@ class SkimlinksAdminSettingsForm extends ConfigFormBase {
     $form['account']['skimlinks_subdomain'] = array(
       '#title' => t('Custom redirection sub domain'),
       '#type' => 'textfield',
-      '#default_value'  => $config->get('subdomain') ? $config->get('subdomain') : 'go.redirectingat.com',
+      '#default_value'  => $config->get('subdomain') ? $config->get('subdomain') : 'https://go.redirectingat.com',
       '#description' => t(
         'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Please include the http:// or https://. Visit the <a href="https://hub.skimlinks.com/setup/settings" target="_blank">Skimlinks Advanced Settings</a> page for more details.', 
         array(
