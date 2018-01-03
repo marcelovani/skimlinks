@@ -2,7 +2,7 @@
 
 /**
  * @file
- * Install, requirements, and uninstall functionsfor the Skimlinks 
+ * Install, requirements, and uninstall functionsfor the Skimlinks
  * module.
  */
 
@@ -44,5 +44,9 @@ function skimlinks_requirements($phase) {
  * Implements hook_uninstall().
  */
 function skimlinks_uninstall() {
-	drupal_clear_js_cache();
+  variable_del('skimlinks_publisherid');
+  variable_del('skimlinks_subdomain');
+  variable_del('skimlinks_disclosurebadge');
+  variable_del('filter_skimlink_host');
+  drupal_clear_js_cache();
 }
