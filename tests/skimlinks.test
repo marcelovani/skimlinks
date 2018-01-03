@@ -85,5 +85,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
 
     $this->drupalGet('/');
+    $this->assertRaw('var skimlinks_domain = "go.redirectingat.com"');
+    $this->assertRaw('<script type="text/javascript" src="http://s.skimresources.com/js/12345X1234567.skimlinks.js"></script>');
   }
 }
