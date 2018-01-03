@@ -36,6 +36,56 @@ function skimlinks_permission() {
   );
 }
 
+/**
+ * Implements hook_node_view().
+ *
+ */
+function skimlinks_node_view($node) {
+  // Check that Server side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 1) {
+    return;
+  }
+
+  // Make sure we don't touch internal links.
+  global $base_url;
+  $parsed_url = parse_url($base_url);
+  $host = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+
+  // Look up the fields to act on.
+  foreach (element_children($node->content) as $field_id) {
+    if (empty($node->content[$field_id]['#items'])) {
+      continue;
+    }
+
+    foreach ($node->content[$field_id]['#items'] as $key => $field) {
+      if (isset($field['format'])) {
+        if (empty($node->content[$field_id][$key]['#markup'])) {
+          continue;
+        }
+
+        $markup = &$node->content[$field_id][$key]['#markup'];
+
+        // Get all links, excluding internal links.
+        $doc = filter_dom_load($markup);
+        $xpath = new DOMXpath($doc);
+        $elements = $xpath->query("//a[not(contains(@href,'$host'))]");
+
+        foreach ($elements as $domElement) {
+          $href = $domElement->getAttribute('href');
+          // Only change links that are external and are not blacklisted.
+          if (url_is_external($href) && !skimlinks_domain_blacklisted($href)) {
+            $redirect = skimlinks_get_redirect_url($href, $node);
+            $domElement->setAttribute('href', $redirect);
+            if (variable_get('skimlinks_link_new_window')) {
+              $domElement->setAttribute('target', '_blank');
+            }
+          }
+        }
+        $markup = filter_dom_serialize($doc);
+      }
+    }
+  }
+}
 
 /**
  * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
@@ -45,6 +95,7 @@ function skimlinks_page_alter(&$page) {
     return;
   }
 
+  // Check that Client side implementation is enabled.
   if (variable_get('skimlinks_environment', 0) != 0) {
     return;
   }
@@ -231,4 +282,45 @@ function skimlinks_urlshortener($url) {
   }
 
   return FALSE;
+}
+
+/**
+ * Helper to build the redirect url.
+ */
+function skimlinks_get_redirect_url($path, $node) {
+  $xcust = $node->nid;
+  $context = array('node' => $node);
+  // Allow other modules to alter the custom parameters.
+  drupal_alter('skimlinks_xcust', $xcust, $context);
+
+  $parameters = array(
+    'id' => check_plain(variable_get('skimlinks_publisherid')),
+    'url' => check_url($path),
+    'xcust' => check_plain($xcust),
+    'sref ' => check_url(drupal_get_path_alias()),
+  );
+  $query = drupal_http_build_query($parameters);
+
+  $redirect_url = check_url(variable_get('skimlinks_subdomain'));
+  $redirect_url = trim($redirect_url, '/') . '/';
+
+  return "$redirect_url?$query";
+}
+
+/**
+ * Helper to check if a domain is blacklisted.
+ *
+ * @param $url The url to be tested.
+ *
+ * @return TRUE if the domain is blacklisted.
+ */
+function skimlinks_domain_blacklisted($url) {
+  $parsed_url = parse_url($url);
+  $host = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+  $blacklist = variable_get('skimlinks_domain_blacklist', '');
+  foreach (array_filter(explode("\n", $blacklist)) as $domain) {
+    if (strpos($host, trim($domain)) !== FALSE) {
+      return TRUE;
+    }
+  }
 }
