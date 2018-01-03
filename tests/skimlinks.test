@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * Skimlinks tests.
+ *
+ * @group skimlinks
+ */
+class SkimlinksDirectTest extends DrupalWebTestCase {
+  protected $profile = 'standard';
+
+  /**
+   * Modules to enable.
+   *
+   * @var array
+   */
+  public $modules = array(
+    'skimlinks',
+    'node',
+  );
+
+  /**
+   * A user with the 'Administer Skimlinks' permission.
+   *
+   * @var object
+   */
+  protected $adminUser;
+
+  /**
+   * Info.
+   *
+   * @return array
+   *   The test info
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Skimlinks',
+      'description' => 'Test Skimlinks.',
+      'group' => 'Skimlinks',
+    );
+  }
+
+  /**
+   * Setup.
+   */
+  public function setUp() {
+    parent::setUp($this->modules);
+
+    // Create admin user.
+    $this->adminUser = $this->drupalCreateUser(array(
+      'access administration pages',
+      'administer skimlinks',
+      'create page content',
+      'edit own page content',
+    ));
+
+    // Enable clean urls.
+    variable_set('clean_url', TRUE);
+  }
+
+  /**
+   * Test Skimlinks.
+   */
+  function testSkimlinks() {
+    $this->drupalLogin($this->adminUser);
+    $this->drupalGet('admin/config/services/skimlinks');
+
+    $edit = array(
+      'skimlinks_publisherid' => '12345X1234567',
+      'skimlinks_subdomain' => 'http://go.redirectingat.com',
+    );
+    $this->drupalPost('admin/config/services/skimlinks', $edit, t('Save configuration'));
+    $this->assertRaw(t('The configuration options have been saved'));
+
+    // Test the form values.
+    $value = $this->xpath('//input[@name="skimlinks_publisherid"]/@value')[0];
+    $this->assertEqual($value, '12345X1234567');
+
+    $value = $this->xpath('//input[@name="skimlinks_subdomain"]/@value')[0];
+    $this->assertEqual($value, 'http://go.redirectingat.com');
+
+    $edit = array();
+    $edit['title'] = 'This is a test title';
+    $edit["body[und][0][value]"] = '<a href="http://google.com">Google.com</a>';
+    $this->drupalPost('node/add/page', $edit, t('Save'));
+    $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
+
+    $this->drupalGet('/');
+  }
+}
