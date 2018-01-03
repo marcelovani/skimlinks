@@ -24,7 +24,8 @@ function skimlinks_requirements($phase) {
 
   if ($phase == 'runtime') {
     // Raise warning if SiteID has not been set yet.
-    if (empty(variable_get('skimlinks_publisherid'))) {
+    $publisher_id = variable_get('skimlinks_publisherid', '');
+    if (empty($publisher_id)) {
       $requirements['skimlinks_publisherid'] = [
         'title' => t('Skimlinks module'),
         'description' => t(
