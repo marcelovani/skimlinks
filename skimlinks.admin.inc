@@ -43,11 +43,41 @@ function skimlinks_admin_settings_form($form_state) {
     '#type' => 'textfield',
     '#default_value'  => variable_get('skimlinks_subdomain', 'go.redirectingat.com'),
     '#description' => t(
-      'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Please include the http:// or https://. Visit the !settings page for more details.', 
+      'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Please include the http:// or https://. Visit the !settings page for more details.',
       array(
         '!settings' => l(t('Skimlinks Advanced Settings'), 'https://hub.skimlinks.com/setup/settings', array('attributes' =>array('target' => ' _blank')))
       )
     )
+  );
+
+  $form['skimlinks_environment'] = array(
+    '#type' => 'radios',
+    '#title' => t('Environment'),
+    '#options' => array(t('Client side'), t('Server side')),
+    '#description' => t('Client side uses Javascript, server side runs on the server.'),
+    '#default_value' => variable_get('skimlinks_environment', 0),
+  );
+
+  $form['server_side'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Optional settings'),
+    '#states' => array('visible' => array(
+      ':input[name="skimlinks_environment"]' => array('value' => '1'))
+    ),
+  );
+
+  $form['server_side']['skimlinks_domain_blacklist'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Domain blacklist'),
+    '#description' => t('These domains will not be altered by skimlinks module. Please enter one domain per line. i.e. example.com. You do not need to specify the protocol.'),
+    '#default_value' => variable_get('skimlinks_domain_blacklist'),
+  );
+
+  $form['server_side']['skimlinks_link_new_window'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Open links in a new window'),
+    '#description' => t('Tick the box to make the links open on a new window.'),
+    '#default_value' => variable_get('skimlinks_link_new_window', 1),
   );
 
   // Custom submit handler must be defined as system_settings_form()
@@ -97,7 +127,7 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
     $cnamecheck_url = $subdomain . '/check/domain_check.html';
     $original = drupal_http_request($standard_url);
     $new = drupal_http_request($cnamecheck_url);
-    
+
     if (empty($new->data) || $original->data !== $new->data) {
       form_set_error('skimlinks_subdomain', t('Your custom redirection sub-domain is not currently pointing at Skimlinks servers.'));
     }

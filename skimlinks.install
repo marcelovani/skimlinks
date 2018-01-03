@@ -50,6 +50,6 @@ function skimlinks_uninstall() {
   variable_del('filter_skimlink_host');
   variable_del('skimlinks_environment');
   variable_del('skimlinks_link_new_window');
-  variable_del('skimlinks_blacklist');
+  variable_del('skimlinks_domain_blacklist');
   drupal_clear_js_cache();
 }

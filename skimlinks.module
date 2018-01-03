@@ -45,8 +45,12 @@ function skimlinks_page_alter(&$page) {
     return;
   }
 
+  if (variable_get('skimlinks_environment', 0) != 0) {
+    return;
+  }
+
   if ($domain_id = variable_get('skimlinks_publisherid', FALSE)) {
-  
+
     if ($subdomain = variable_get('skimlinks_subdomain', FALSE)) {
       // Remove http:// or https://
       foreach (array('http://', 'https://') as $protocol) {
@@ -55,7 +59,7 @@ function skimlinks_page_alter(&$page) {
 
       drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
     }
-    
+
     drupal_add_js("http://s.skimresources.com/js/{$domain_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
   }
 }
@@ -83,12 +87,12 @@ function skimlinks_block_view($delta = '') {
       else {
         $content = t('You need to set your sites !domainid first.', array('!domainid' => l(t('domain ID'), 'admin/config/system/skimlinks')));
       }
-      
+
       $block = array(
         'subject' => '',
         'content' => $content
       );
-      
+
       break;
   }
 
@@ -108,7 +112,7 @@ function skimlinks_block_configure($delta = '') {
         '#type' => 'fieldgroup',
         '#title' => t('Badge')
       );
-      
+
       for ($count = 1; $count <=5; $count++) {
         $options[$count] = theme('image', array(
         'path' => 'https://accounts.skimlinks.com/img/referral/button_' . $count . '.gif',
@@ -116,7 +120,7 @@ function skimlinks_block_configure($delta = '') {
         'alt' => t('Image of a disclosure badge style ' . $count)
         ));
       }
-      
+
       $form['badge']['skimlinks_disclosurebadge'] = array(
         '#type' => 'radios',
         '#title' => t('Style'),
@@ -163,7 +167,7 @@ function skimlinks_block_save($delta = '', $edit = array()) {
 
 /**
  * Allow admins to select the type of short url
- * 
+ *
  * @access private
  * @param mixed $form
  * @param mixed &$form_state
@@ -193,7 +197,7 @@ function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defa
 
 /**
  * Find all urls in the node field content and get them shortened
- * 
+ *
  * @access public
  * @param mixed $text
  * @param mixed $filter
@@ -207,7 +211,7 @@ function skimlinks_shorten_urls($text, $filter) {
 
 /**
  * Call the Skimlinks API to generate a short affiliated url from our source url
- * 
+ *
  * @access public
  * @param mixed $url
  * @return void
@@ -216,7 +220,7 @@ function skimlinks_urlshortener($url) {
   $id = variable_get('skimlinks_publisherid', FALSE);
   $domain_id = current( explode( 'x', $id ));
   $host = variable_get('filter_skimlink_host', 'buyth.at');
-  
+
   $url = $url[1];
 
   $shortener = drupal_http_request('https://accounts.skimlinks.com/shorturl_ajax.php?url=' . $url . '&host=' . $host . '&pubid=' . $domain_id);
@@ -225,6 +229,6 @@ function skimlinks_urlshortener($url) {
     preg_match('/(http:\/\/' . $host . '\/[a-zA-Z0-9]*)/', $shortener->data, $tinyurl);
     return $tinyurl[0];
   }
-  
+
   return FALSE;
 }
