@@ -66,6 +66,13 @@ function skimlinks_admin_settings_form($form_state) {
     ),
   );
 
+  $form['server_side']['skimlinks_merchant_api_endpoint'] = array(
+    '#type' => 'textfield',
+    '#title' => t('API Endpoint'),
+    '#description' => t('The API key for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
+    '#default_value' => variable_get('skimlinks_merchant_api_endpoint', 'https://merchants.skimapis.com/v3/merchants'),
+  );
+
   $form['server_side']['skimlinks_merchant_api_key'] = array(
     '#type' => 'textfield',
     '#title' => t('API Key'),
@@ -73,24 +80,24 @@ function skimlinks_admin_settings_form($form_state) {
     '#default_value' => variable_get('skimlinks_merchant_api_key'),
   );
 
-  $form['server_side']['skimlinks_merchant_account_type'] = array(
+  $form['server_side']['skimlinks_merchant_api_account_type'] = array(
     '#type' => 'textfield',
     '#title' => t('Account type'),
     '#description' => t('The account type for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
-    '#default_value' => variable_get('skimlinks_merchant_account_type'),
+    '#default_value' => variable_get('skimlinks_merchant_api_account_type'),
   );
 
-  $form['server_side']['skimlinks_merchant_account_id'] = array(
+  $form['server_side']['skimlinks_merchant_api_account_id'] = array(
     '#type' => 'textfield',
     '#title' => t('Account Id'),
     '#description' => t('The account Id for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
-    '#default_value' => variable_get('skimlinks_merchant_account_id'),
+    '#default_value' => variable_get('skimlinks_merchant_api_account_id'),
   );
 
   $form['server_side']['skimlinks_domain_whitelist'] = array(
     '#type' => 'textarea',
     '#title' => t('Domain whitelist'),
-    '#description' => t('List domains that are Skimlinks Merchants. Please enter one domain per line. i.e. example.com. You do not need to specify the protocol.'),
+    '#description' => t('List domains that are Skimlinks Merchants. Please enter one domain per line. i.e. example.com. You do not need to specify the protocol. If you provide the details for the API, these values are populated automatically.'),
     '#default_value' => variable_get('skimlinks_domain_whitelist'),
   );
 

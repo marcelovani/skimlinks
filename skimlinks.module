@@ -380,7 +380,7 @@ function _skimlinks_entity_update_whitelist($entity) {
         // Get whitelist as array.
         $whitelist = variable_get('skimlinks_domain_whitelist', '');
         $whitelist = array_filter(explode("\n", $whitelist));
-debug($whitelist);
+
         // Check if it is a valid merchant.
         $valid_domain = skimlinks_valid_merchant($domain);
 
@@ -396,7 +396,6 @@ debug('whitelisted ' . $domain);
           $key = array_search($domain, $whitelist);
           unset($whitelist[$key]);
 debug('un-whitelisted ' . $domain);
-debug($whitelist);
           variable_set('skimlinks_domain_whitelist', implode("\n", $whitelist));
         }
       }
@@ -420,6 +419,26 @@ function skimlinks_valid_merchant($domain) {
  * @param $domain
  */
 function skimlinks_merchant_api_call($domain) {
+  $api_endpoint = check_plain(variable_get('skimlinks_merchant_api_endpoint'));
+  $parameters = array(
+    'apikey' => check_plain(variable_get('skimlinks_merchant_api_key')),
+    'account_id' => check_plain(variable_get('skimlinks_merchant_api_account_id')),
+    'account_type' => check_plain(variable_get('skimlinks_merchant_api_account_type')),
+  );
+  $query = drupal_http_build_query($parameters);
+var_dump($query);
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_HEADER, FALSE);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT,10);
+  curl_setopt($ch, CURLOPT_URL, "$api_endpoint?$query");
+
+  $response = curl_exec($ch);
+  curl_close($ch);
+
+  print_r($response);exit;
+//@todo populate whitelist
+  //@todo create cron job to call this instead on node save
   return TRUE;//@todo do the call
 }
 
