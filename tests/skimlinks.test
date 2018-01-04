@@ -122,8 +122,8 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $edit = array();
     $links = array(
       'external_link' => '<a href="http://google.com">Google.com</a>',
-      'internal_link_relative' => '<a href="/">Home relative</a>',
-      'internal_link_absolute' => '<a href="' . $base_url . '/">Home absolute</a>',
+      'internal_link_relative' => '<a href="/page1">Page1</a>',
+      'internal_link_absolute' => '<a href="' . $base_url . '/page2">Page2</a>',
       'external_blacklisted_1' => '<a href="http://test.com">Test.com</a>',
       'external_blacklisted_2' => '<a href="http://test.co.uk">Test.co.uk</a>',
     );
@@ -133,16 +133,18 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
 
     // Check that external links are using the wrapper.
-    $this->assertRaw('href="http://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//google.com&amp;xcust=1&amp;sref%20=node/1"');
+    $this->assertRaw('href="http://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//google.com&amp;xcust=1&amp;sref=');
+    $this->assertPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/node/1|");
 
     // Check that internal links are not changed.
-    $this->assertRaw('<a href="/">Home relative</a>');
-    $this->assertRaw('<a href="' . $base_url . '/">Home absolute</a>');
-    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com\.*" . $base_url ."|");
+    $this->assertRaw('<a href="/page1">Page1</a>');
+    $this->assertRaw('<a href="' . $base_url . '/page2">Page2</a>');
+    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/page1|");
+    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/page2|");
 
     // Check that links to blacklisted domains are not affected.
     $this->assertRaw('<a href="http://test.com">Test.com</a>');
     $this->assertRaw('<a href="http://test.co.uk">Test.co.uk</a>');
-    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com\.*test\.co|");
+    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com.*?url=http%3A//test.com|");
   }
 }

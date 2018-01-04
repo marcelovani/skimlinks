@@ -290,17 +290,23 @@ function skimlinks_urlshortener($url) {
 function skimlinks_get_redirect_url($path, $node) {
   $xcust = $node->nid;
   $context = array('node' => $node);
-  // Allow other modules to alter the custom parameters.
+
+  // Allow other modules to alter xcust.
   drupal_alter('skimlinks_xcust', $xcust, $context);
+
+  $current_url = url(current_path(), array(
+    'absolute' => TRUE,
+    'query' => drupal_get_query_parameters())
+  );
 
   $parameters = array(
     'id' => check_plain(variable_get('skimlinks_publisherid')),
     'url' => check_url($path),
     'xcust' => check_plain($xcust),
-    'sref ' => check_url(drupal_get_path_alias()),
+    'sref' => check_url($current_url),
   );
-  $query = drupal_http_build_query($parameters);
 
+  $query = drupal_http_build_query($parameters);
   $redirect_url = check_url(variable_get('skimlinks_subdomain'));
   $redirect_url = trim($redirect_url, '/') . '/';
 
