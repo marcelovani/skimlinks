@@ -66,6 +66,13 @@ function skimlinks_admin_settings_form($form_state) {
     ),
   );
 
+  $form['server_side']['skimlinks_domain_whitelist'] = array(
+    '#type' => 'textarea',
+    '#title' => t('Domain whitelist'),
+    '#description' => t('List domains that are Skimlinks Merchants. Please enter one domain per line. i.e. example.com. You do not need to specify the protocol.'),
+    '#default_value' => variable_get('skimlinks_domain_whitelist'),
+  );
+
   $form['server_side']['skimlinks_domain_blacklist'] = array(
     '#type' => 'textarea',
     '#title' => t('Domain blacklist'),

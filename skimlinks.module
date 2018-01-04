@@ -46,10 +46,7 @@ function skimlinks_node_view($node) {
     return;
   }
 
-  // Make sure we don't touch internal links.
-  global $base_url;
-  $parsed_url = parse_url($base_url);
-  $host = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+  $host = _skimlinks_get_host();
 
   // Look up the fields to act on.
   foreach (element_children($node->content) as $field_id) {
@@ -73,7 +70,7 @@ function skimlinks_node_view($node) {
         foreach ($elements as $domElement) {
           $href = $domElement->getAttribute('href');
           // Only change links that are external and are not blacklisted.
-          if (url_is_external($href) && !skimlinks_domain_blacklisted($href)) {
+          if (skimlinks_domain_allowed($href)) {
             $redirect = skimlinks_get_redirect_url($href, $node);
             $domElement->setAttribute('href', $redirect);
             if (variable_get('skimlinks_link_new_window')) {
@@ -311,6 +308,150 @@ function skimlinks_get_redirect_url($path, $node) {
   $redirect_url = trim($redirect_url, '/') . '/';
 
   return "$redirect_url?$query";
+}
+
+/**
+ * Implements hook_entity_insert().
+ *
+ * @param $entity
+ * @param $type
+ */
+function skimlinks_entity_insert($entity, $type) {
+  // Check that Server side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 1) {
+    return;
+  }
+
+  _skimlinks_entity_update_whitelist($entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ *
+ * @param $entity
+ * @param $type
+ */
+function skimlinks_entity_update($entity, $type) {
+  // Check that Server side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 1) {
+    return;
+  }
+
+  _skimlinks_entity_update_whitelist($entity);
+}
+
+/**
+ * Helper to return only the host bit of the base url.
+ *
+ * @return string The host
+ */
+function _skimlinks_get_host() {
+  // Make sure we don't touch internal links.
+  global $base_url;
+  $parsed_url = parse_url($base_url);
+
+  return $parsed_url['host'];
+}
+
+function _skimlinks_entity_update_whitelist($entity) {
+  $host = _skimlinks_get_host();
+
+  foreach ($entity as $key => $field) {
+    if (is_array($field) && isset($field[$entity->language][0]['format'])) { //@todo work with multivalue fields
+      var_dump($field);
+      if (empty($field[$entity->language][0]['value'])) {
+        continue;
+      }
+
+      $value = $entity->{$key}[$entity->language][0]['value'];
+
+      // Get all links, excluding internal links.
+      $doc = filter_dom_load($value);
+      $xpath = new DOMXpath($doc);
+      $elements = $xpath->query("//a[not(contains(@href,'$host'))]");
+
+      foreach ($elements as $domElement) {
+        $href = $domElement->getAttribute('href');
+        $parsed_url = parse_url($href);
+
+        // Remove www from domain.
+        $domain = str_replace('www.', '', $parsed_url['host']);
+
+        // Get whitelist as array.
+        $whitelist = variable_get('skimlinks_domain_whitelist', '');
+        $whitelist = array_filter(explode("\n", $whitelist));
+debug($whitelist);
+        // Check if it is a valid merchant.
+        $valid_domain = skimlinks_valid_merchant($domain);
+
+        if ($valid_domain && !in_array($domain, $whitelist)) {
+          // Add domain to whitelist
+          $whitelist[] = $domain;
+          variable_set('skimlinks_domain_whitelist', implode("\n", $whitelist));
+debug('whitelisted ' . $domain);
+        }
+
+        if (!$valid_domain && in_array($domain, $whitelist)) {
+          // Remove domain from whitelist.
+          $key = array_search($domain, $whitelist);
+          unset($whitelist[$key]);
+debug('un-whitelisted ' . $domain);
+debug($whitelist);
+          variable_set('skimlinks_domain_whitelist', implode("\n", $whitelist));
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Tests a domain against the Merchant API
+ * http://developers.skimlinks.com/merchant.html
+ *
+ * @param $domain
+ */
+function skimlinks_valid_merchant($domain) {
+  return skimlinks_merchant_api_call($domain);
+}
+
+/**
+ * Calls the Merchant API to
+ *
+ * @param $domain
+ */
+function skimlinks_merchant_api_call($domain) {
+  return TRUE;//@todo do the call
+}
+
+/**
+ * Wrapper to test that the domain of the url is whitelisted and not blacklisted.
+ *
+ * @param $url The url to be tested.
+ *
+ * @return TRUE if the domain is allowed.
+ */
+function skimlinks_domain_allowed($url) {
+  return url_is_external($url) &&
+    skimlinks_domain_whitelisted($url) &&
+    !skimlinks_domain_blacklisted($url);
+}
+
+/**
+ * Helper to check if a domain is whitelisted.
+ *
+ * @param $url The url to be tested.
+ *
+ * @return TRUE if the domain is whitelisted.
+ */
+function skimlinks_domain_whitelisted($url) {
+  $parsed_url = parse_url($url);
+  $host = isset($parsed_url['host']) ? $parsed_url['host'] : '';
+  $whitelist = variable_get('skimlinks_domain_whitelist', '');
+  foreach (array_filter(explode("\n", $whitelist)) as $domain) {
+    if (strpos($host, trim($domain)) !== FALSE) {
+      return TRUE;
+    }
+  }
 }
 
 /**
