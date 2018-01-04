@@ -148,7 +148,16 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
  * Actions on submission of the skimlinks form.
  */
 function skimlinks_admin_settings_form_submit($form, &$form_state) {
-  // Clear the javascript cache so the settings are applied
-  // immediately.
+  // Clean whitelist/blacklist.
+  foreach (array('whitelist', 'blacklist') as $key => $item) {
+    $values = &$form_state['values']['skimlinks_domain_' . $item];
+    $values = explode("\n", $values);
+    $values = array_map('trim', $values);
+    $values = array_filter($values, 'trim');
+    $values = array_unique($values);
+    $values = implode("\n", $values);
+  }
+
+  // Clear the javascript cache so the settings are applied immediately.
   drupal_clear_js_cache();
 }
