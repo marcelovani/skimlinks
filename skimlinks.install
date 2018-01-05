@@ -7,6 +7,42 @@
  */
 
 /**
+ * Implements hook_schema().
+ */
+function skimlinks_schema() {
+  $schema = array();
+
+  $tables = array(
+    'skimlinks_whitelist',
+    'skimlinks_blacklist'
+  );
+
+  foreach ($tables as $name) {
+    $schema[$name] = array(
+      'description' => 'Stores skimlinks domains.',
+      'fields' => array(
+        'domain' => array(
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'description' => 'The domain name',
+        ),
+        'last_updated' => array(
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'Timestamp for last update',
+        ),
+      ),
+      'primary key' => array('domain'),
+    );
+  }
+
+  return $schema;
+}
+
+/**
  * Implements hook_install().
  *
  * Prompt user to configure the module on install.
@@ -51,11 +87,18 @@ function skimlinks_uninstall() {
   variable_del('filter_skimlink_host');
   variable_del('skimlinks_environment');
   variable_del('skimlinks_link_new_window');
-  variable_del('skimlinks_domain_blacklist');
-  variable_del('skimlinks_domain_whitelist');
   variable_del('skimlinks_merchant_api_endpoint');
   variable_del('skimlinks_merchant_api_key');
   variable_del('skimlinks_merchant_api_account_type');
   variable_del('skimlinks_merchant_api_account_id');
   drupal_clear_js_cache();
+}
+
+/**
+ * Create whitelist and blacklist tables.
+ */
+function skimlinks_update_7001() {
+  if (db_table_exists('skimlinks_whitelist') == FALSE) {
+    drupal_install_schema('skimlinks');
+  }
 }
