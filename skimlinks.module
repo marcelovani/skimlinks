@@ -37,6 +37,51 @@ function skimlinks_permission() {
 }
 
 /**
+ * Implements hook_cron_queue_info().
+ */
+function skimlinks_cron_queue_info() {
+  if (!variable_get('skimlinks_api_cron_enabled', 1)) {
+    return;
+  }
+
+  $queues['skimlinks_api_queue'] = array(
+    'worker callback' => 'skimlinks_api_process_queue_item',
+    'time' => (int) variable_get('skimlinks_queue_process_time', 60),
+  );
+
+  return $queues;
+}
+
+/**
+ * Helper to add items to the queue.
+ *
+ * @param array $domain
+ */
+function skimlinks_api_add_queue_item($domain) {
+  // Check if the domain was already checked on the last N minutes.
+  $t = variable_get('skimlinks_whitelist_update_threshold', 720);
+  $query = db_select('skimlinks_whitelist', 'w');
+  $query->addField('w', 'domain');
+  $query->condition('w.last_updated', $_SERVER['REQUEST_TIME'] - $t, '>');
+  $query->isNull('b.domain');
+echo ($query);exit;
+  $result = $query->execute()->fetchAllAssoc('domain');
+
+  // Get the queue handle.
+  $q = DrupalQueue::get('skimlinks_api_queue');
+  $q->createItem(array($domain));
+}
+
+/**
+ * Perform action on each queue item.
+ *
+ * @param array $data
+ */
+function skimlinks_api_process_queue_item($data) {
+  var_dump($data);exit;
+}
+
+/**
  * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
  */
 function skimlinks_page_alter(&$page) {
@@ -269,11 +314,6 @@ function skimlinks_get_redirect_url($path, $node) {
  * @param $type
  */
 function skimlinks_entity_insert($entity, $type) {
-  // Check that Server side implementation is enabled.
-  if (variable_get('skimlinks_environment', 0) != 1) {
-    return;
-  }
-
   _skimlinks_entity_update_whitelist($entity);
 }
 
@@ -284,11 +324,6 @@ function skimlinks_entity_insert($entity, $type) {
  * @param $type
  */
 function skimlinks_entity_update($entity, $type) {
-  // Check that Server side implementation is enabled.
-  if (variable_get('skimlinks_environment', 0) != 1) {
-    return;
-  }
-
   _skimlinks_entity_update_whitelist($entity);
 }
 
@@ -331,29 +366,43 @@ function skimlinks_node_view($node, $view_mode, $langcode) {
     }
 
     foreach ($node->content[$field_id]['#items'] as $key => $field) {
-      if (isset($field['format'])) {
-        if (empty($node->content[$field_id][$key]['#markup'])) {
-          continue;
+      if (empty($field['format']) || empty($node->content[$field_id][$key]['#markup'])) { //@todo replace with $field['#markup']
+        continue;
+      }
+
+      $markup = &$node->content[$field_id][$key]['#markup'];
+
+      // Get all links, excluding internal links.
+      $doc = filter_dom_load($markup);
+      $xpath = new DOMXpath($doc);
+      $elements = $xpath->query("//a[not(contains(@href,'$host'))]");
+
+      $changed = FALSE;
+      foreach ($elements as $domElement) {
+        $href = $domElement->getAttribute('href');
+        if (skimlinks_domain_allowed($href)) {
+
+          // Change the link.
+          $redirect = skimlinks_get_redirect_url($href, $node);
+          $domElement->setAttribute('href', $redirect);
+
+          if (variable_get('skimlinks_link_new_window')) {
+            $domElement->setAttribute('target', '_blank');
+          }
+          $changed = TRUE;
         }
 
-        $markup = &$node->content[$field_id][$key]['#markup'];
-
-        // Get all links, excluding internal links.
-        $doc = filter_dom_load($markup);
-        $xpath = new DOMXpath($doc);
-        $elements = $xpath->query("//a[not(contains(@href,'$host'))]");
-
-        foreach ($elements as $domElement) {
-          $href = $domElement->getAttribute('href');
-          // Only change links that are external and are not blacklisted.
-          if (skimlinks_domain_allowed($href)) {
-            $redirect = skimlinks_get_redirect_url($href, $node);
-            $domElement->setAttribute('href', $redirect);
-            if (variable_get('skimlinks_link_new_window')) {
-              $domElement->setAttribute('target', '_blank');
-            }
+        // Queue domain to be checked by Merchant API worker.
+        if (variable_get('skimlinks_api_cron_enabled', 1)) {
+          if (url_is_external($href)) {
+            $domain = _skimlinks_get_host($href);
+            skimlinks_api_add_queue_item($domain);
           }
         }
+      }
+
+      // Update markup if there was any change.
+      if ($changed) {
         $markup = filter_dom_serialize($doc);
       }
     }
@@ -366,6 +415,11 @@ function skimlinks_node_view($node, $view_mode, $langcode) {
  * @param $entity
  */
 function _skimlinks_entity_update_whitelist($entity) {
+  // Check that Server side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 1) {
+    return;
+  }
+
   // Check if the configuration to update the whitelist when entity is changed is on.
   if (variable_get('skimlinks_update_whitelist_entity_update', 1) != 1) {
     return;
@@ -410,7 +464,6 @@ function _skimlinks_entity_update_whitelist($entity) {
  * @param $timeout The timeout in ms
  */
 function skimlinks_valid_merchant($domain, $timeout = 10) {
-  echo $domain;
   $result = skimlinks_merchant_api_call($domain, $timeout);
   if (!empty($result->merchants)) {
     return TRUE;
@@ -495,12 +548,10 @@ function skimlinks_domain_allowed($url) {
   $query->isNull('b.domain');
 
   $result = $query->execute()->fetchAllAssoc('domain');
-echo skimlinks_valid_merchant($domain) . '<br>';//@todo remove this
+echo $domain . ': ' . skimlinks_valid_merchant($domain) . '<br>';//@todo remove this
   if (sizeof($result) > 0) {
-    echo 'VALID';
     return TRUE;
   }
-    echo 'NOT VALID';
 }
 
 ///**

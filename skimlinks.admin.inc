@@ -66,32 +66,75 @@ function skimlinks_admin_settings_form($form_state) {
     ),
   );
 
-  $form['server_side']['skimlinks_merchant_api_endpoint'] = array(
+  $form['server_side']['api'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('API settings'),
+  );
+
+  $form['server_side']['api']['skimlinks_merchant_api_endpoint'] = array(
     '#type' => 'textfield',
     '#title' => t('API Endpoint'),
-    '#description' => t('The API key for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
+    '#description' => t('The API key for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant.'),
     '#default_value' => variable_get('skimlinks_merchant_api_endpoint', 'https://merchants.skimapis.com/v3/merchants'),
   );
 
-  $form['server_side']['skimlinks_merchant_api_key'] = array(
+  $form['server_side']['api']['skimlinks_merchant_api_key'] = array(
     '#type' => 'textfield',
     '#title' => t('API Key'),
-    '#description' => t('The API key for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
+    '#description' => t('The API key for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant.'),
     '#default_value' => variable_get('skimlinks_merchant_api_key'),
   );
 
-  $form['server_side']['skimlinks_merchant_api_account_type'] = array(
+  $form['server_side']['api']['skimlinks_merchant_api_account_type'] = array(
     '#type' => 'textfield',
     '#title' => t('Account type'),
-    '#description' => t('The account type for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
+    '#description' => t('The account type for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant.'),
     '#default_value' => variable_get('skimlinks_merchant_api_account_type'),
   );
 
-  $form['server_side']['skimlinks_merchant_api_account_id'] = array(
+  $form['server_side']['api']['skimlinks_merchant_api_account_id'] = array(
     '#type' => 'textfield',
     '#title' => t('Account Id'),
-    '#description' => t('The account Id for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant'),
+    '#description' => t('The account Id for the Merchant API https://hub.skimlinks.com/toolbox/apis/merchant.'),
     '#default_value' => variable_get('skimlinks_merchant_api_account_id'),
+  );
+
+  $form['server_side']['skimlinks_api_cron_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enable Cron to update Merchant API whitelist'),
+    '#description' => t('Tick the box to turn on the cron job to update the whitelist using the Merchant API.'),
+    '#default_value' => variable_get('skimlinks_api_cron_enabled', 1),
+  );
+
+  $form['server_side']['cron'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Cron settings'),
+    '#states' => array('visible' => array(
+      ':input[name="skimlinks_api_cron_enabled"]' => array('checked' => TRUE))
+    ),
+  );
+
+  $form['server_side']['cron']['skimlinks_queue_process_time'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Cron processing time (Seconds)'),
+    '#size' => 4,
+    '#description' => t('The number in seconds to spend when running cron.'),
+    '#default_value' => (int) variable_get('skimlinks_queue_process_time', 60),
+  );
+
+  $form['server_side']['cron']['skimlinks_whitelist_update_threshold'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Whitelist update threshold (Minutes)'),
+    '#size' => 4,
+    '#description' => t('Used to control how often you want to update the domains in the whitelist. Default: Every 12 hours.'),
+    '#default_value' => (int) variable_get('skimlinks_whitelist_update_threshold', 720),
+  );
+
+  $form['server_side']['skimlinks_update_whitelist_entity_update'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Update whitelist when content changes'),
+    '#description' => t('Tick the box to update the whitelist when content is saved. The whitelist is automatically populated by the Merchant API.'),
+    '#default_value' => variable_get('skimlinks_update_whitelist_entity_update', 1),
   );
 
   $form['server_side']['skimlinks_domain_blacklist'] = array(
