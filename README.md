@@ -36,8 +36,8 @@ http://developers.skimlinks.com/merchant.html.
 When you save a node, the links found in the fields will be checked using the 
 Merchant API http://developers.skimlinks.com/merchant.html
 
-All domains will be added/removed to/from the whitelisted automatically when you
-save a node or when cron runs.
+All domains will be added/removed to/from the known domains automatically when
+you save a node or when cron runs.
 
-The blacklist is a global option that takes precedence over the whitelist and
-will avoid changing any link that points to a domain in the list.
+The blacklist is a global option that will avoid changing any link that points
+to a domain in the list.

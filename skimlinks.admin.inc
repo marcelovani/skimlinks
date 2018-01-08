@@ -104,8 +104,8 @@ function skimlinks_admin_settings_form($form_state) {
 
   $form['server_side']['skimlinks_api_cron_enabled'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Enable Cron to update Merchant API whitelist'),
-    '#description' => t('Tick the box to turn on the cron job to update the whitelist using the Merchant API.'),
+    '#title' => t('Enable Cron to update known domains using the Skimlinks Merchant API'),
+    '#description' => t('Tick the box to turn on the cron job.'),
     '#default_value' => variable_get('skimlinks_api_cron_enabled', 1),
   );
 
@@ -127,19 +127,19 @@ function skimlinks_admin_settings_form($form_state) {
     '#default_value' => (int) variable_get('skimlinks_queue_process_time', 60),
   );
 
-  $form['server_side']['cron']['skimlinks_whitelist_update_threshold'] = array(
+  $form['server_side']['cron']['skimlinks_domains_update_threshold'] = array(
     '#type' => 'textfield',
-    '#title' => t('Whitelist update threshold (Minutes)'),
+    '#title' => t('Cron update threshold (Minutes)'),
     '#size' => 4,
-    '#description' => t('Used to control how often you want to update the domains in the whitelist. Default: Every 12 hours.'),
-    '#default_value' => (int) variable_get('skimlinks_whitelist_update_threshold', 720),
+    '#description' => t('Used to control how often you want to update the list of known domains. Default: Every 12 hours.'),
+    '#default_value' => (int) variable_get('skimlinks_domains_update_threshold', 720),
   );
 
-  $form['server_side']['skimlinks_update_whitelist_entity_update'] = array(
+  $form['server_side']['__skimlinks_update_known_domains_on_entity_update'] = array(
     '#type' => 'checkbox',
-    '#title' => t('Update whitelist when content changes'),
-    '#description' => t('Tick the box to update the whitelist when content is saved. The whitelist is automatically populated by the Merchant API.'),
-    '#default_value' => variable_get('skimlinks_update_whitelist_entity_update', 1),
+    '#title' => t('Update known domains when content changes'),
+    '#description' => t('Tick the box to update the kwnon domains list when content is saved. The list is automatically populated by the Merchant API.'),
+    '#default_value' => variable_get('skimlinks_update_known_domains_on_entity_update', 1),
   );
 
   $form['server_side']['skimlinks_domain_blacklist'] = array(

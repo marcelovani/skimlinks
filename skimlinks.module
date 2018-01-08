@@ -58,25 +58,8 @@ function skimlinks_cron_queue_info() {
  * @param array $domain
  */
 function skimlinks_api_add_queue_item($domain) {
-  //$queue = FALSE;
-
-  // Check if the domain is in the whitelist or needs refreshing.
-  if (_skimlinks_whitelist_expired($domain)) {
-
-  //}
-
-
-  //var_dump($queue);return;
-///
-//if (!empty($result)) {
-//  $result = reset($result);
-//  echo '5m ' . date('d-m-Y H:i:s', time() + $minutes * 60) . '<br>';
-//  echo 'DB ' . date('d-m-Y H:i:s', $result->last_updated) . '<br>';
-//}
-////exit;
-
-  // If the domain is not in the whitelist of it has expired, add to queue.
-  //if ($queue) {
+  // Check if the domain is known and/or needs refreshing.
+  if (_skimlinks_domain_expired($domain)) {
     // Get the queue handle.
     $q = DrupalQueue::get('skimlinks_api_queue');
     $q->createItem(array($domain));
@@ -90,9 +73,9 @@ function skimlinks_api_add_queue_item($domain) {
  */
 function skimlinks_api_process_queue_item($data) {
   foreach ($data as $domain) {
-    // Check if the domain is in the whitelist or needs refreshing.
+    // Check if the domain is known and/or needs refreshing.
     // This check avoids multiple updates the same domain before it expired.
-    if (_skimlinks_whitelist_expired($domain)) {
+    if (_skimlinks_domain_expired($domain)) {
       skimlinks_validate_merchant($domain);
     }
   }
@@ -331,7 +314,7 @@ function skimlinks_get_redirect_url($path, $node) {
  * @param $type
  */
 function skimlinks_entity_insert($entity, $type) {
-  _skimlinks_entity_update_whitelist($entity);
+  __skimlinks_entity_update_knwown_domains($entity);
 }
 
 /**
@@ -341,7 +324,7 @@ function skimlinks_entity_insert($entity, $type) {
  * @param $type
  */
 function skimlinks_entity_update($entity, $type) {
-  _skimlinks_entity_update_whitelist($entity);
+  __skimlinks_entity_update_knwown_domains($entity);
 }
 
 /**
@@ -432,18 +415,19 @@ function skimlinks_node_view($node, $view_mode, $langcode) {
 }
 
 /**
- * Helper to update the whitelist when the entity is created or updated.
+ * Helper to update the known domains when the entity is created or updated.
  *
  * @param $entity
  */
-function _skimlinks_entity_update_whitelist($entity) {
+function __skimlinks_entity_update_knwown_domains($entity) {
   // Check that Server side implementation is enabled.
   if (variable_get('skimlinks_environment', 0) != 1) {
     return;
   }
 
-  // Check if the configuration to update the whitelist when entity is changed is on.
-  if (variable_get('skimlinks_update_whitelist_entity_update', 1) != 1) {
+  // Check if the configuration to update the known domains when entity is
+  // changed is on.
+  if (variable_get('skimlinks_update_known_domains_on_entity_update', 1) != 1) {
     return;
   }
 
@@ -474,7 +458,7 @@ function _skimlinks_entity_update_whitelist($entity) {
 /**
  * Tests a domain against the Merchant API
  * http://developers.skimlinks.com/merchant.html
- * Adds the entry to the Whitelist.
+ * Adds the entry to the known domains list.
  *
  * @param $domain The domain
  * @param $timeout The timeout in ms
@@ -482,37 +466,12 @@ function _skimlinks_entity_update_whitelist($entity) {
 function skimlinks_validate_merchant($domain, $timeout = 10) {
   $result = skimlinks_merchant_api_call($domain, $timeout);
   if (!empty($result->merchants)) {
-    skimlinks_domain_whitelist_update($domain, TRUE);
+    skimlinks_known_domains_update($domain, TRUE);
   }
   else {
-    skimlinks_domain_whitelist_update($domain, FALSE);
+    skimlinks_known_domains_update($domain, FALSE);
   }
 }
-//
-///**
-// * Implements hook_cron().
-//*/
-//function skimlinks_cron() {
-//  // Check if it is a valid merchant.
-//  if (skimlinks_validate_merchant($domain, 2)) {
-//    skimlinks_domain_whitelist_update($domain);
-//  }
-//  else {
-//    _skimlinks_domain_whitelist_remove($domain);
-//  }
-//
-//  $domains = array();
-//  $result = skimlinks_merchant_api_call();
-//  if (empty($result->merchants)) {
-//    return;
-//  }
-//  foreach ($result->merchants as $key => $item) {
-//    $domains = array_merge($domains, $item->domains);
-//  }
-//  $domains = array_unique($domains);
-//  var_dump($domains);
-//  exit;
-//}
 
 /**
  * Calls the Merchant API to
@@ -540,13 +499,10 @@ function skimlinks_merchant_api_call($domain, $timeout = 10) {
   curl_close($ch);
 
   return $result;
-
-  //@todo populate whitelist
-  //@todo create cron job to call this instead on node save
 }
 
 /**
- * Wrapper to test that the domain of the url is whitelisted and not blacklisted.
+ * Test if the domain of the url is known, valid and not blacklisted.
  *
  * @param $url The url to be tested.
  *
@@ -558,7 +514,7 @@ function skimlinks_domain_allowed($url) {
     return;
   }
 
-  if (db_table_exists('skimlinks_whitelist') == FALSE) {
+  if (db_table_exists('skimlinks_domains') == FALSE) {
     return;
   }
 
@@ -568,7 +524,7 @@ function skimlinks_domain_allowed($url) {
 
   $domain = _skimlinks_get_host($url);
 
-  $query = db_select('skimlinks_whitelist', 'w');
+  $query = db_select('skimlinks_domains', 'w');
   $query->addField('w', 'domain');
   $query->leftJoin('skimlinks_blacklist', 'b', 'w.domain = b.domain');
   $query->condition('w.domain', $domain);
@@ -576,26 +532,11 @@ function skimlinks_domain_allowed($url) {
   $query->isNull('b.domain');
 
   $result = $query->execute()->fetchAllAssoc('domain');
-//echo $domain . ': ' . skimlinks_validate_merchant($domain) . '<br>';//@todo remove this
+
   if (sizeof($result) > 0) {
     return TRUE;
   }
 }
-
-///**
-// * Gets a list of whitelisted domains.
-// *
-// * @return array The list
-// */
-//function skimlinks_domain_whitelist() {
-//  return db_select('skimlinks_whitelist', 's')
-//    ->fields('s', array('domain'))
-//    ->fields('s', array('last_updated'))
-//    ->execute()
-//    ->fetchAllAssoc('domain');
-//
-//  return array_keys($result);
-//}
 
 /**
  * Gets a list of blacklisted domains.
@@ -612,13 +553,17 @@ function skimlinks_domain_blacklist() {
 }
 
 /**
- * Add a domain to whitelist
+ * Adds/Updates a domain to the known domains list.
  *
  * @param $domain The domain
  * @param $valid True is its valid
  */
-function skimlinks_domain_whitelist_update($domain, $valid) {
-  db_merge('skimlinks_whitelist')
+function skimlinks_known_domains_update($domain, $valid) {
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    return;
+  }
+
+  db_merge('skimlinks_domains')
     ->key(array('domain' => $domain))
     ->fields(array(
       'domain' => $domain,
@@ -636,11 +581,15 @@ function skimlinks_domain_whitelist_update($domain, $valid) {
  *
  * @return TRUE if the domain has expired or doesn't exist on the table.
  */
-function _skimlinks_whitelist_expired($domain) {
+function _skimlinks_domain_expired($domain) {
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    return;
+  }
+
   // Check if the domain was already checked on the last N minutes.
-  $minutes = variable_get('skimlinks_whitelist_update_threshold', 720);
+  $minutes = variable_get('skimlinks_domains_update_threshold', 720);
 //$minutes = 1;
-  $query = db_select('skimlinks_whitelist', 'w');
+  $query = db_select('skimlinks_domains', 'w');
   $query->addField('w', 'last_updated');
   $query->condition('w.domain', $domain);
 
