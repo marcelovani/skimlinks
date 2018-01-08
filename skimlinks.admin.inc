@@ -220,28 +220,8 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
  */
 function skimlinks_admin_settings_form_submit($form, &$form_state) {
   // Update blacklist.
-  skimlinks_update_blacklist($form_state['values']['skimlinks_domain_blacklist']);
+  skimlinks_create_blacklist($form_state['values']['skimlinks_domain_blacklist']);
 
   // Clear the javascript cache so the settings are applied immediately.
   drupal_clear_js_cache();
-}
-
-/**
- * Helper to save the blacklist on the database.
- *
- * @param $domains
- */
-function skimlinks_update_blacklist($domains) {
-  $domains = explode("\n", $domains);
-  $domains = array_map('trim', $domains);
-  $domains = array_filter($domains, 'trim');
-  $domains = array_unique($domains);
-
-  db_truncate('skimlinks_blacklist')->execute();
-  $query = db_insert('skimlinks_blacklist')->fields(array('domain'));
-
-  foreach ($domains as $domain) {
-    $query->values(array('domain' => check_plain($domain)));
-  }
-  $query->execute();
 }

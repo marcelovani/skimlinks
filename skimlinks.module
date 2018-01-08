@@ -588,30 +588,33 @@ function _skimlinks_domain_expired($domain) {
 
   // Check if the domain was already checked on the last N minutes.
   $minutes = variable_get('skimlinks_domains_update_threshold', 720);
-//$minutes = 1;
+
   $query = db_select('skimlinks_domains', 'w');
   $query->addField('w', 'last_updated');
   $query->condition('w.domain', $domain);
-
-//  $query->where('FROM_UNIXTIME(w.last_updated) > DATE_ADD(NOW(), INTERVAL :n MINUTE)',
-//    array(':n' => $minutes)
-//  );
-
-  //$query->isNull('w.domain');
-  echo $domain . ' ' . $minutes . ' min ';
-//echo ($query);
   $last_updated = $query->execute()->fetchField();
 
-  if (empty($last_updated)) {
+  if (empty($last_updated) || $last_updated + $minutes * 60 < $_SERVER['REQUEST_TIME']) {
     return TRUE;
   }
-  echo '<br>';
-  echo 'last up    ' . date("H:i:s", $last_updated) . '<Br>';
-  echo 'expire     ' . date("H:i:s", $last_updated + $minutes * 60) . '<Br> ';
-  echo 'servertime ' . date("H:i:s", $_SERVER['REQUEST_TIME']) . '<br>';
-  if ($last_updated + $minutes * 60 < $_SERVER['REQUEST_TIME']) {
-    echo 'Needs update' ; var_dump($last_updated);
-    return TRUE;
-  }
+}
 
+/**
+ * Helper to save the blacklist on the database.
+ *
+ * @param $domains
+ */
+function skimlinks_create_blacklist($domains) {
+  $domains = explode("\n", $domains);
+  $domains = array_map('trim', $domains);
+  $domains = array_filter($domains, 'trim');
+  $domains = array_unique($domains);
+
+  db_truncate('skimlinks_blacklist')->execute();
+  $query = db_insert('skimlinks_blacklist')->fields(array('domain'));
+
+  foreach ($domains as $domain) {
+    $query->values(array('domain' => check_plain($domain)));
+  }
+  $query->execute();
 }
