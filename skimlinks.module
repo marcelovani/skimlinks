@@ -58,18 +58,29 @@ function skimlinks_cron_queue_info() {
  * @param array $domain
  */
 function skimlinks_api_add_queue_item($domain) {
-  // Check if the domain was already checked on the last N minutes.
-  $t = variable_get('skimlinks_whitelist_update_threshold', 720);
-  $query = db_select('skimlinks_whitelist', 'w');
-  $query->addField('w', 'domain');
-  $query->condition('w.last_updated', $_SERVER['REQUEST_TIME'] - $t, '>');
-  $query->isNull('b.domain');
-echo ($query);exit;
-  $result = $query->execute()->fetchAllAssoc('domain');
+  //$queue = FALSE;
 
-  // Get the queue handle.
-  $q = DrupalQueue::get('skimlinks_api_queue');
-  $q->createItem(array($domain));
+  // Check if the domain is in the whitelist or needs refreshing.
+  if (_skimlinks_whitelist_expired($domain)) {
+
+  //}
+
+
+  //var_dump($queue);return;
+///
+//if (!empty($result)) {
+//  $result = reset($result);
+//  echo '5m ' . date('d-m-Y H:i:s', time() + $minutes * 60) . '<br>';
+//  echo 'DB ' . date('d-m-Y H:i:s', $result->last_updated) . '<br>';
+//}
+////exit;
+
+  // If the domain is not in the whitelist of it has expired, add to queue.
+  //if ($queue) {
+    // Get the queue handle.
+    $q = DrupalQueue::get('skimlinks_api_queue');
+    $q->createItem(array($domain));
+  }
 }
 
 /**
@@ -78,7 +89,13 @@ echo ($query);exit;
  * @param array $data
  */
 function skimlinks_api_process_queue_item($data) {
-  var_dump($data);exit;
+  foreach ($data as $domain) {
+    // Check if the domain is in the whitelist or needs refreshing.
+    // This check avoids multiple updates the same domain before it expired.
+    if (_skimlinks_whitelist_expired($domain)) {
+      skimlinks_validate_merchant($domain);
+    }
+  }
 }
 
 /**
@@ -336,8 +353,13 @@ function skimlinks_entity_update($entity, $type) {
  */
 function _skimlinks_get_host($url) {
   if ($parsed_url = parse_url($url)) {
-    $host = str_replace('www.', '', $parsed_url['host']);
-    return $host;
+    if (isset($parsed_url['host'])) {
+      return str_replace('www.', '', $parsed_url['host']);
+    }
+    else {
+      debug($url);
+      return $url;
+    }
   }
 }
 
@@ -442,14 +464,7 @@ function _skimlinks_entity_update_whitelist($entity) {
 
         foreach ($elements as $domElement) {
           $domain = _skimlinks_get_host($domElement->getAttribute('href'));
-
-          // Check if it is a valid merchant.
-          if (skimlinks_valid_merchant($domain, 2)) {
-            _skimlinks_domain_whitelist_add($domain);
-          }
-          else {
-            _skimlinks_domain_whitelist_remove($domain);
-          }
+          skimlinks_validate_merchant($domain, 2);
         }
       }
     }
@@ -459,33 +474,45 @@ function _skimlinks_entity_update_whitelist($entity) {
 /**
  * Tests a domain against the Merchant API
  * http://developers.skimlinks.com/merchant.html
+ * Adds the entry to the Whitelist.
  *
  * @param $domain The domain
  * @param $timeout The timeout in ms
  */
-function skimlinks_valid_merchant($domain, $timeout = 10) {
+function skimlinks_validate_merchant($domain, $timeout = 10) {
   $result = skimlinks_merchant_api_call($domain, $timeout);
   if (!empty($result->merchants)) {
-    return TRUE;
+    skimlinks_domain_whitelist_update($domain, TRUE);
+  }
+  else {
+    skimlinks_domain_whitelist_update($domain, FALSE);
   }
 }
-
-/**
- * Implements hook_cron().
-*/
-function skimlinks_cron() {
-  $domains = array();
-  $result = skimlinks_merchant_api_call();
-  if (empty($result->merchants)) {
-    return;
-  }
-  foreach ($result->merchants as $key => $item) {
-    $domains = array_merge($domains, $item->domains);
-  }
-  $domains = array_unique($domains);
-  print_r($domains);
-  exit;
-}
+//
+///**
+// * Implements hook_cron().
+//*/
+//function skimlinks_cron() {
+//  // Check if it is a valid merchant.
+//  if (skimlinks_validate_merchant($domain, 2)) {
+//    skimlinks_domain_whitelist_update($domain);
+//  }
+//  else {
+//    _skimlinks_domain_whitelist_remove($domain);
+//  }
+//
+//  $domains = array();
+//  $result = skimlinks_merchant_api_call();
+//  if (empty($result->merchants)) {
+//    return;
+//  }
+//  foreach ($result->merchants as $key => $item) {
+//    $domains = array_merge($domains, $item->domains);
+//  }
+//  $domains = array_unique($domains);
+//  var_dump($domains);
+//  exit;
+//}
 
 /**
  * Calls the Merchant API to
@@ -545,10 +572,11 @@ function skimlinks_domain_allowed($url) {
   $query->addField('w', 'domain');
   $query->leftJoin('skimlinks_blacklist', 'b', 'w.domain = b.domain');
   $query->condition('w.domain', $domain);
+  $query->condition('w.valid', 1);
   $query->isNull('b.domain');
 
   $result = $query->execute()->fetchAllAssoc('domain');
-echo $domain . ': ' . skimlinks_valid_merchant($domain) . '<br>';//@todo remove this
+//echo $domain . ': ' . skimlinks_validate_merchant($domain) . '<br>';//@todo remove this
   if (sizeof($result) > 0) {
     return TRUE;
   }
@@ -587,24 +615,54 @@ function skimlinks_domain_blacklist() {
  * Add a domain to whitelist
  *
  * @param $domain The domain
+ * @param $valid True is its valid
  */
-function _skimlinks_domain_whitelist_add($domain) {
+function skimlinks_domain_whitelist_update($domain, $valid) {
   db_merge('skimlinks_whitelist')
     ->key(array('domain' => $domain))
     ->fields(array(
       'domain' => $domain,
       'last_updated' => $_SERVER['REQUEST_TIME'],
+      'valid' => ($valid === TRUE) ? 1 : 0,
     ))
     ->execute();
 }
 
 /**
- * Remove a domain from whitelist
+ * Helper to check if the domain needs to be refreshed after the update
+ * threshold is reached or it doesn't exist.
  *
- * @param $domain The domain
+ * @param $domain
+ *
+ * @return TRUE if the domain has expired or doesn't exist on the table.
  */
-function _skimlinks_domain_whitelist_remove($domain) {
-  db_delete('skimlinks_whitelist')
-    ->condition('domain', $domain)
-    ->execute();
+function _skimlinks_whitelist_expired($domain) {
+  // Check if the domain was already checked on the last N minutes.
+  $minutes = variable_get('skimlinks_whitelist_update_threshold', 720);
+//$minutes = 1;
+  $query = db_select('skimlinks_whitelist', 'w');
+  $query->addField('w', 'last_updated');
+  $query->condition('w.domain', $domain);
+
+//  $query->where('FROM_UNIXTIME(w.last_updated) > DATE_ADD(NOW(), INTERVAL :n MINUTE)',
+//    array(':n' => $minutes)
+//  );
+
+  //$query->isNull('w.domain');
+  echo $domain . ' ' . $minutes . ' min ';
+//echo ($query);
+  $last_updated = $query->execute()->fetchField();
+
+  if (empty($last_updated)) {
+    return TRUE;
+  }
+  echo '<br>';
+  echo 'last up    ' . date("H:i:s", $last_updated) . '<Br>';
+  echo 'expire     ' . date("H:i:s", $last_updated + $minutes * 60) . '<Br> ';
+  echo 'servertime ' . date("H:i:s", $_SERVER['REQUEST_TIME']) . '<br>';
+  if ($last_updated + $minutes * 60 < $_SERVER['REQUEST_TIME']) {
+    echo 'Needs update' ; var_dump($last_updated);
+    return TRUE;
+  }
+
 }

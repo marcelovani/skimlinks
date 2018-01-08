@@ -12,32 +12,47 @@
 function skimlinks_schema() {
   $schema = array();
 
-  $tables = array(
-    'skimlinks_whitelist',
-    'skimlinks_blacklist'
+  $schema['skimlinks_blacklist'] = array(
+    'description' => 'Stores blacklisted domains.',
+    'fields' => array(
+      'domain' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'The domain name',
+      ),
+    ),
+    'primary key' => array('domain'),
   );
 
-  foreach ($tables as $name) {
-    $schema[$name] = array(
-      'description' => 'Stores skimlinks domains.',
-      'fields' => array(
-        'domain' => array(
-          'type' => 'varchar',
-          'length' => 255,
-          'not null' => TRUE,
-          'description' => 'The domain name',
-        ),
-        'last_updated' => array(
-          'type' => 'int',
-          'unsigned' => TRUE,
-          'not null' => TRUE,
-          'default' => 0,
-          'description' => 'Timestamp for last update',
-        ),
+  $schema['skimlinks_whitelist'] = array(
+    'description' => 'Stores whitelisted domains.',
+    'fields' => array(
+      'domain' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'The domain name',
       ),
-      'primary key' => array('domain'),
-    );
-  }
+      'last_updated' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp for last update',
+      ),
+      'valid' => array(
+        'type' => 'int',
+        'default' => 0,
+        'size' => 'tiny',
+        'description' => 'The domain exists on the Skimlinks Merchant API',
+      ),
+    ),
+    'primary key' => array('domain'),
+    'indexes' => array(
+      'domain_valid' => array('domain', 'valid'),
+    ),
+  );
 
   return $schema;
 }
@@ -48,7 +63,7 @@ function skimlinks_schema() {
  * Prompt user to configure the module on install.
  */
 function skimlinks_install() {
-	$config_link = l(t('Please configure the Skimlinks module.'), 'admin/config/services/skimlinks');
+  $config_link = l(t('Please configure the Skimlinks module.'), 'admin/config/services/skimlinks');
   drupal_set_message($config_link);
 }
 
@@ -56,7 +71,7 @@ function skimlinks_install() {
  * Implements hook_requirements().
  */
 function skimlinks_requirements($phase) {
-	$requirements = [];
+  $requirements = [];
 
   if ($phase == 'runtime') {
     // Raise warning if SiteID has not been set yet.
@@ -65,8 +80,8 @@ function skimlinks_requirements($phase) {
       $requirements['skimlinks_publisherid'] = [
         'title' => t('Skimlinks module'),
         'description' => t(
-        	'Skimlinks module has not been configured yet. Please configure its settings from the !config.',
-        	array('!config' => l(t('Skimlinks settings page'), 'admin/config/services/skimlinks'))
+          'Skimlinks module has not been configured yet. Please configure its settings from the !config.',
+          array('!config' => l(t('Skimlinks settings page'), 'admin/config/services/skimlinks'))
         ),
         'severity' => REQUIREMENT_WARNING,
         'value' => t('Not configured'),

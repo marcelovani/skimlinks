@@ -11,6 +11,7 @@
 
 /**
  * Implements hook_admin_settings() for module settings configuration.
+ *
  * @todo rename "skimlinks_publisherid" variable to skimlinks_domainid
  */
 function skimlinks_admin_settings_form($form_state) {
@@ -41,11 +42,11 @@ function skimlinks_admin_settings_form($form_state) {
   $form['account']['skimlinks_subdomain'] = array(
     '#title' => t('Custom redirection sub domain'),
     '#type' => 'textfield',
-    '#default_value'  => variable_get('skimlinks_subdomain', 'go.redirectingat.com'),
+    '#default_value' => variable_get('skimlinks_subdomain', 'go.redirectingat.com'),
     '#description' => t(
       'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Please include the http:// or https://. Visit the !settings page for more details.',
       array(
-        '!settings' => l(t('Skimlinks Advanced Settings'), 'https://hub.skimlinks.com/setup/settings', array('attributes' =>array('target' => ' _blank')))
+        '!settings' => l(t('Skimlinks Advanced Settings'), 'https://hub.skimlinks.com/setup/settings', array('attributes' => array('target' => ' _blank')))
       )
     )
   );
@@ -61,8 +62,10 @@ function skimlinks_admin_settings_form($form_state) {
   $form['server_side'] = array(
     '#type' => 'fieldset',
     '#title' => t('Server side settings'),
-    '#states' => array('visible' => array(
-      ':input[name="skimlinks_environment"]' => array('value' => '1'))
+    '#states' => array(
+      'visible' => array(
+        ':input[name="skimlinks_environment"]' => array('value' => '1')
+      )
     ),
   );
 
@@ -109,8 +112,10 @@ function skimlinks_admin_settings_form($form_state) {
   $form['server_side']['cron'] = array(
     '#type' => 'fieldset',
     '#title' => t('Cron settings'),
-    '#states' => array('visible' => array(
-      ':input[name="skimlinks_api_cron_enabled"]' => array('checked' => TRUE))
+    '#states' => array(
+      'visible' => array(
+        ':input[name="skimlinks_api_cron_enabled"]' => array('checked' => TRUE)
+      )
     ),
   );
 
@@ -160,6 +165,7 @@ function skimlinks_admin_settings_form($form_state) {
 
 /**
  * Validates the Skimlinks admin form.
+ *
  * @todo Improve domain id validation.
  */
 function skimlinks_admin_settings_form_validate($form, &$form_state) {
@@ -172,6 +178,7 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
   // Ensure the skimlinks account consist of only numbers and letters
   if (!preg_match('/^[a-zA-Z0-9]*$/', $publisher_id)) {
     form_set_error('skimlinks_publisherid', 'A valid Domain ID should have the following format: 000000X000000');
+
     return FALSE;
   }
 
@@ -231,20 +238,10 @@ function skimlinks_update_blacklist($domains) {
   $domains = array_unique($domains);
 
   db_truncate('skimlinks_blacklist')->execute();
-  $query = db_insert('skimlinks_blacklist')->fields(
-    array(
-      'domain',
-      'last_updated'
-    )
-  );
+  $query = db_insert('skimlinks_blacklist')->fields(array('domain'));
 
   foreach ($domains as $domain) {
-    $query->values(
-      array(
-        'domain' => check_plain($domain),
-        'last_updated' => $_SERVER['REQUEST_TIME'],
-      )
-    );
+    $query->values(array('domain' => check_plain($domain)));
   }
   $query->execute();
 }
