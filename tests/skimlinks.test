@@ -93,7 +93,11 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
       'skimlinks_subdomain' => 'http://go.redirectingat.com',
       'skimlinks_environment' => '1',
       'skimlinks_link_new_window' => '1',
-      'skimlinks_domain_blacklist' => 'test.co',
+      'skimlinks_merchant_api_endpoint' => 'https://private-anon-0c21969285-skimlinksmerchantapi.apiary-mock.com/v3/merchants',
+      'skimlinks_merchant_api_key' => '8ef774f4d56a60530747bd1fbd5cf198',
+      'skimlinks_merchant_api_account_type' => 'publisher_admin',
+      'skimlinks_merchant_api_account_id' => '12345',
+      'skimlinks_domain_blacklist' => "test.com\r\ntest.co.uk",
     );
     $this->drupalPost('admin/config/services/skimlinks', $edit, t('Save configuration'));
     $this->assertRaw(t('The configuration options have been saved'));
@@ -112,7 +116,8 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertEqual($value, '1');
 
     $value = $this->xpath('//textarea[@name="skimlinks_domain_blacklist"]/text()')[0];
-    $this->assertEqual($value, 'test.co');
+    $this->AssertTrue(strpos($value, "test.com") !== FALSE);
+    $this->AssertTrue(strpos($value, "test.co.uk") !== FALSE);
 
     $this->drupalGet('/');
     $this->assertNoRaw('var skimlinks_domain');
@@ -121,7 +126,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     global $base_url;
     $edit = array();
     $links = array(
-      'external_link' => '<a href="http://google.com">Google.com</a>',
+      'external_link' => '<a href="http://jcpenney.com">jcpenney.com</a>',
       'internal_link_relative' => '<a href="/page1">Page1</a>',
       'internal_link_absolute' => '<a href="' . $base_url . '/page2">Page2</a>',
       'external_blacklisted_1' => '<a href="http://test.com">Test.com</a>',
@@ -133,7 +138,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
 
     // Check that external links are using the wrapper.
-    $this->assertRaw('href="http://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//google.com&amp;xcust=1&amp;sref=');
+    $this->assertRaw('href="http://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//jcpenney.com&amp;xcust=1&amp;sref=');
     $this->assertPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/node/1|");
 
     // Check that internal links are not changed.

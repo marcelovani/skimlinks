@@ -340,7 +340,6 @@ function _skimlinks_get_host($url) {
       return str_replace('www.', '', $parsed_url['host']);
     }
     else {
-      debug($url);
       return $url;
     }
   }
