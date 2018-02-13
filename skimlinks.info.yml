@@ -5,3 +5,5 @@ package: E-Commerce
 
 type: module
 core: 8.x
+dependencies:
+  - drupal:block
