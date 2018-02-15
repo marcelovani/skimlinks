@@ -7,12 +7,63 @@
  */
 
 /**
+ * Implements hook_schema().
+ */
+function skimlinks_schema() {
+  $schema = array();
+
+  $schema['skimlinks_blacklist'] = array(
+    'description' => 'Stores blacklisted domains.',
+    'fields' => array(
+      'domain' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'The domain name',
+      ),
+    ),
+    'primary key' => array('domain'),
+  );
+
+  $schema['skimlinks_domains'] = array(
+    'description' => 'Stores known domains.',
+    'fields' => array(
+      'domain' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'description' => 'The domain name',
+      ),
+      'last_updated' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Timestamp for last update',
+      ),
+      'valid' => array(
+        'type' => 'int',
+        'default' => 0,
+        'size' => 'tiny',
+        'description' => 'The domain exists on the Skimlinks Merchant API',
+      ),
+    ),
+    'primary key' => array('domain'),
+    'indexes' => array(
+      'domain_valid' => array('domain', 'valid'),
+    ),
+  );
+
+  return $schema;
+}
+
+/**
  * Implements hook_install().
  *
  * Prompt user to configure the module on install.
  */
 function skimlinks_install() {
-	$config_link = l(t('Please configure the Skimlinks module.'), 'admin/config/services/skimlinks');
+  $config_link = l(t('Please configure the Skimlinks module.'), 'admin/config/services/skimlinks');
   drupal_set_message($config_link);
 }
 
@@ -20,7 +71,7 @@ function skimlinks_install() {
  * Implements hook_requirements().
  */
 function skimlinks_requirements($phase) {
-	$requirements = [];
+  $requirements = [];
 
   if ($phase == 'runtime') {
     // Raise warning if SiteID has not been set yet.
@@ -29,8 +80,8 @@ function skimlinks_requirements($phase) {
       $requirements['skimlinks_publisherid'] = [
         'title' => t('Skimlinks module'),
         'description' => t(
-        	'Skimlinks module has not been configured yet. Please configure its settings from the !config.',
-        	array('!config' => l(t('Skimlinks settings page'), 'admin/config/services/skimlinks'))
+          'Skimlinks module has not been configured yet. Please configure its settings from the !config.',
+          array('!config' => l(t('Skimlinks settings page'), 'admin/config/services/skimlinks'))
         ),
         'severity' => REQUIREMENT_WARNING,
         'value' => t('Not configured'),
@@ -45,9 +96,33 @@ function skimlinks_requirements($phase) {
  * Implements hook_uninstall().
  */
 function skimlinks_uninstall() {
+  variable_del('skimlinks_displays');
   variable_del('skimlinks_publisherid');
   variable_del('skimlinks_subdomain');
   variable_del('skimlinks_disclosurebadge');
   variable_del('filter_skimlink_host');
+  variable_del('skimlinks_environment');
+  variable_del('skimlinks_link_new_window');
+  variable_del('skimlinks_link_nofollow');
+  variable_del('skimlinks_merchant_api_endpoint');
+  variable_del('skimlinks_merchant_api_key');
+  variable_del('skimlinks_merchant_api_account_type');
+  variable_del('skimlinks_merchant_api_account_id');
+  variable_del('skimlinks_update_known_domains_on_entity_update');
+  variable_del('skimlinks_domains_update_threshold');
+  variable_del('skimlinks_api_cron_enabled');
+  variable_del('skimlinks_cron_process_time');
+
+  //@todo delete tables
+
   drupal_clear_js_cache();
+}
+
+/**
+ * Create Skimlinks tables.
+ */
+function skimlinks_update_7001() {
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    drupal_install_schema('skimlinks');
+  }
 }

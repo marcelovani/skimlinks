@@ -36,6 +36,47 @@ function skimlinks_permission() {
   );
 }
 
+/**
+ * Implements hook_cron().
+ */
+function skimlinks_cron() {
+  if (!variable_get('skimlinks_api_cron_enabled', 1)) {
+    return;
+  }
+
+  // Return if the tables haven't been created yet, this can occur before updates have run.
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    return;
+  }
+
+  $end = time() + (int) variable_get('skimlinks_cron_process_time', 60);
+  $expired_domains = skimlinks_get_expired_domains_query();
+  while (time() < $end && ($item = $expired_domains->fetchObject())) {
+    try {
+      skimlinks_validate_merchant($item->domain);
+    }
+    catch (Exception $e) {
+      watchdog_exception('cron', $e->getMessage());
+    }
+  }
+}
+
+/**
+ * Get list of expired domain items.
+ *
+ * @return \DatabaseStatementInterface|null
+ */
+function skimlinks_get_expired_domains_query() {
+  $minutes = variable_get('skimlinks_domains_update_threshold', 720);
+  $expiry_time = REQUEST_TIME - ($minutes * 60);
+
+  $query = db_select('skimlinks_domains', 'd');
+  $query->addField('d', 'domain');
+  $query->condition('d.last_updated', $expiry_time, '<');
+  $query->orderBy('d.last_updated', 'ASC');
+
+  return $query->execute();
+}
 
 /**
  * Implements hook_page_alter() to insert JavaScript to the appropriate scope/region of the page.
@@ -45,8 +86,13 @@ function skimlinks_page_alter(&$page) {
     return;
   }
 
+  // Check that Client side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 0) {
+    return;
+  }
+
   if ($domain_id = variable_get('skimlinks_publisherid', FALSE)) {
-  
+
     if ($subdomain = variable_get('skimlinks_subdomain', FALSE)) {
       // Remove http:// or https://
       foreach (array('http://', 'https://') as $protocol) {
@@ -55,7 +101,7 @@ function skimlinks_page_alter(&$page) {
 
       drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
     }
-    
+
     drupal_add_js("http://s.skimresources.com/js/{$domain_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
   }
 }
@@ -83,12 +129,12 @@ function skimlinks_block_view($delta = '') {
       else {
         $content = t('You need to set your sites !domainid first.', array('!domainid' => l(t('domain ID'), 'admin/config/system/skimlinks')));
       }
-      
+
       $block = array(
         'subject' => '',
         'content' => $content
       );
-      
+
       break;
   }
 
@@ -108,7 +154,7 @@ function skimlinks_block_configure($delta = '') {
         '#type' => 'fieldgroup',
         '#title' => t('Badge')
       );
-      
+
       for ($count = 1; $count <=5; $count++) {
         $options[$count] = theme('image', array(
         'path' => 'https://accounts.skimlinks.com/img/referral/button_' . $count . '.gif',
@@ -116,7 +162,7 @@ function skimlinks_block_configure($delta = '') {
         'alt' => t('Image of a disclosure badge style ' . $count)
         ));
       }
-      
+
       $form['badge']['skimlinks_disclosurebadge'] = array(
         '#type' => 'radios',
         '#title' => t('Style'),
@@ -163,7 +209,7 @@ function skimlinks_block_save($delta = '', $edit = array()) {
 
 /**
  * Allow admins to select the type of short url
- * 
+ *
  * @access private
  * @param mixed $form
  * @param mixed &$form_state
@@ -193,7 +239,7 @@ function _skimlinks_filter_settings($form, &$form_state, $filter, $format, $defa
 
 /**
  * Find all urls in the node field content and get them shortened
- * 
+ *
  * @access public
  * @param mixed $text
  * @param mixed $filter
@@ -207,7 +253,7 @@ function skimlinks_shorten_urls($text, $filter) {
 
 /**
  * Call the Skimlinks API to generate a short affiliated url from our source url
- * 
+ *
  * @access public
  * @param mixed $url
  * @return void
@@ -216,7 +262,7 @@ function skimlinks_urlshortener($url) {
   $id = variable_get('skimlinks_publisherid', FALSE);
   $domain_id = current( explode( 'x', $id ));
   $host = variable_get('filter_skimlink_host', 'buyth.at');
-  
+
   $url = $url[1];
 
   $shortener = drupal_http_request('https://accounts.skimlinks.com/shorturl_ajax.php?url=' . $url . '&host=' . $host . '&pubid=' . $domain_id);
@@ -225,6 +271,452 @@ function skimlinks_urlshortener($url) {
     preg_match('/(http:\/\/' . $host . '\/[a-zA-Z0-9]*)/', $shortener->data, $tinyurl);
     return $tinyurl[0];
   }
-  
+
   return FALSE;
+}
+
+/**
+ * Helper to build the redirect url.
+ */
+function skimlinks_get_redirect_url($path, $node) {
+  $xcust = $node->nid;
+  $context = array('node' => $node);
+
+  // Allow other modules to alter xcust.
+  drupal_alter('skimlinks_xcust', $xcust, $context);
+
+  $current_url = url(current_path(), array(
+    'absolute' => TRUE,
+    'query' => drupal_get_query_parameters())
+  );
+
+  $parameters = array(
+    'id' => check_plain(variable_get('skimlinks_publisherid')),
+    'url' => check_url($path),
+    'xcust' => check_plain($xcust),
+    'sref' => check_url($current_url),
+  );
+
+  $query = drupal_http_build_query($parameters);
+  $redirect_url = check_url(variable_get('skimlinks_subdomain'));
+  $redirect_url = trim($redirect_url, '/') . '/';
+
+  return "$redirect_url?$query";
+}
+
+/**
+ * Implements hook_entity_insert().
+ *
+ * @param $entity
+ * @param $type
+ */
+function skimlinks_entity_insert($entity, $type) {
+  _skimlinks_entity_update_known_domains($entity);
+}
+
+/**
+ * Implements hook_entity_update().
+ *
+ * @param $entity
+ * @param $type
+ */
+function skimlinks_entity_update($entity, $type) {
+  _skimlinks_entity_update_known_domains($entity);
+}
+
+/**
+ * Helper to return only the host bit of the base url.
+ *
+ * @param $url The url
+ *
+ * @return string The host part of the url
+ */
+function _skimlinks_get_host($url) {
+  if ($parsed_url = parse_url($url)) {
+    if (isset($parsed_url['host'])) {
+      return str_replace('www.', '', $parsed_url['host']);
+    }
+    else {
+      return $url;
+    }
+  }
+}
+
+/**
+ * Implements hook_node_view().
+ *
+ */
+function skimlinks_node_view($node, $view_mode, $langcode) {
+  // Check if this view mode is configured to be processed.
+  if (!in_array($view_mode, variable_get('skimlinks_displays', array('full')))) {
+    return;
+  }
+
+  // Check that Server side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 1) {
+    return;
+  }
+
+  // Look up the fields to act on.
+  foreach (element_children($node->content) as $field_id) {
+    if (empty($node->content[$field_id]['#items'])) {
+      continue;
+    }
+
+    foreach ($node->content[$field_id]['#items'] as $key => $field) {
+      if (empty($field['format']) || empty($node->content[$field_id][$key]['#markup'])) { //@todo replace with $field['#markup']
+        continue;
+      }
+
+      $markup = &$node->content[$field_id][$key]['#markup'];
+      $doc = filter_dom_load($markup);
+
+      $changed = FALSE;
+
+      // Get all links, excluding internal links.
+      foreach (_skimlinks_get_external_links($doc) as $domElement) {
+        $href = $domElement->getAttribute('href');
+        if (skimlinks_domain_allowed($href)) {
+
+          // Change the link.
+          $redirect = skimlinks_get_redirect_url($href, $node);
+          $domElement->setAttribute('href', $redirect);
+
+          if (variable_get('skimlinks_link_new_window', 1)) {
+            $domElement->setAttribute('target', '_blank');
+          }
+
+          if (variable_get('skimlinks_link_nofollow', 1)) {
+            $domElement->setAttribute('rel', 'nofollow');
+          }
+
+          $changed = TRUE;
+        }
+
+        // Create a stub domain entry if we don't know about the domain yet.
+        // It will be checked and updated on cron.
+        if (variable_get('skimlinks_api_cron_enabled', 1)) {
+          if (url_is_external($href)) {
+            $domain = _skimlinks_get_host($href);
+            if (!empty($domain) && !_skimlinks_domain_exists($domain)) {
+              skimlinks_known_domains_update($domain);
+            }
+          }
+        }
+      }
+
+      // Update markup if there was any change.
+      if ($changed) {
+        $markup = filter_dom_serialize($doc);
+      }
+    }
+  }
+}
+
+/**
+ * Get all links, excluding internal links.
+ *
+ * @param \DOMDocument $doc
+ * @return \DOMNodeList
+ */
+function _skimlinks_get_external_links($doc) {
+  global $base_url;
+  $host = _skimlinks_get_host($base_url);
+
+  // Get all links, excluding internal links.
+  $xpath = new DOMXpath($doc);
+  return $xpath->query("//a[not(contains(@href,'$host'))]");
+}
+
+/**
+ * Helper to update the known domains when the entity is created or updated.
+ *
+ * @param $entity
+ */
+function _skimlinks_entity_update_known_domains($entity) {
+  // Check that Server side implementation is enabled.
+  if (variable_get('skimlinks_environment', 0) != 1) {
+    return;
+  }
+
+  // Check if the configuration to update the known domains when entity is
+  // changed is on.
+  if (variable_get('skimlinks_update_known_domains_on_entity_update', 1) != 1) {
+    return;
+  }
+
+  foreach ($entity as $field_name => $field) {
+    if (is_array($field) && isset($field[$entity->language][0]['format'])) {
+      // Loop fields.
+      foreach ($field[$entity->language] as $key => $field_item) {
+        if (empty($field_item['value'])) {
+          continue;
+        }
+        // Get all links, excluding internal links.
+        $doc = filter_dom_load($field_item['value']);
+        foreach (_skimlinks_get_external_links($doc) as $domElement) {
+          $href = $domElement->getAttribute('href');
+          if (url_is_external($href)) {
+            $domain = _skimlinks_get_host($href);
+            // If the domain isn't yet known, look it up straight away.
+            if (!empty($domain) && !_skimlinks_domain_exists($domain)) {
+              skimlinks_validate_merchant($domain, 2);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Tests a domain against the Merchant API
+ * http://developers.skimlinks.com/merchant.html
+ * Adds the entry to the known domains list.
+ *
+ * @param $domain The domain
+ * @param $timeout The timeout in ms
+ */
+function skimlinks_validate_merchant($domain, $timeout = 10) {
+  $result = skimlinks_merchant_api_call($domain, $timeout);
+  if (!empty($result->merchants)) {
+    skimlinks_known_domains_update($domain, TRUE);
+  } else {
+    skimlinks_known_domains_update($domain, FALSE);
+  }
+}
+
+/**
+ * Calls the Merchant API to
+ *
+ * @param $domain The domain
+ * @param $timeout The timeout
+ */
+function skimlinks_merchant_api_call($domain, $timeout = 10) {
+  $api_endpoint = check_plain(variable_get('skimlinks_merchant_api_endpoint'));
+  $parameters = array(
+    'apikey' => check_plain(variable_get('skimlinks_merchant_api_key')),
+    'account_id' => check_plain(variable_get('skimlinks_merchant_api_account_id')),
+    'account_type' => check_plain(variable_get('skimlinks_merchant_api_account_type')),
+    'search' => $domain,
+  );
+  $query = drupal_http_build_query($parameters);
+
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_HEADER, FALSE);
+  curl_setopt($ch, CURLOPT_FRESH_CONNECT, TRUE);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+  curl_setopt($ch, CURLOPT_URL, "$api_endpoint?$query");
+
+  $result = json_decode(curl_exec($ch));
+  curl_close($ch);
+
+  return $result;
+}
+
+/**
+ * Cache ID for allowed URL.
+ *
+ * @param $domain
+ * @return string
+ */
+function _skimlinks_domain_allowed_cid($domain) {
+  return 'skimlinks_domain_allowed:' . $domain;
+}
+
+/**
+ * Test if the domain of the url is known, valid and not blacklisted.
+ *
+ * @param $url The url to be tested.
+ *
+ * @return TRUE if the domain is allowed.
+ */
+function skimlinks_domain_allowed($url) {
+  // Do not change internal urls.
+  if (!url_is_external($url)) {
+    return FALSE;
+  }
+
+  $domain = _skimlinks_get_host($url);
+  if (empty($domain)) {
+    return FALSE;
+  }
+
+  $cid = _skimlinks_domain_allowed_cid($domain);
+
+  // Return static cache if already looked up.
+  $allowed = &drupal_static($cid);
+  if (!is_null($allowed)) {
+    return $allowed;
+  }
+
+  // Get cached value and statically cache for next lookup.
+  if ($cache = cache_get($cid)) {
+    $allowed = $cache->data;
+    return $allowed;
+  }
+
+  // Return if the tables haven't been created yet, this can occur before updates have run.
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    return FALSE;
+  }
+  if (db_table_exists('skimlinks_blacklist') == FALSE) {
+    return FALSE;
+  }
+
+  // Not allowed by default.
+  $allowed = FALSE;
+
+  $query = db_select('skimlinks_domains', 'w');
+  $query->addField('w', 'domain');
+  $query->leftJoin('skimlinks_blacklist', 'b', 'w.domain = b.domain');
+  $query->condition('w.domain', $domain);
+  $query->condition('w.valid', 1);
+  $query->isNull('b.domain');
+
+  $result = $query->execute()->fetchAllAssoc('domain');
+
+  if (sizeof($result) > 0) {
+    $allowed = TRUE;
+  }
+
+  cache_set($cid, $allowed);
+
+  return $allowed;
+}
+
+/**
+ * Gets a list of blacklisted domains.
+ *
+ * @return array The list
+ */
+function skimlinks_domain_blacklist() {
+  // Return if the tables haven't been created yet, this can occur before updates have run.
+  if (db_table_exists('skimlinks_blacklist') == FALSE) {
+    return array();
+  }
+
+  $result = db_select('skimlinks_blacklist', 'b')
+    ->fields('b', array('domain'))
+    ->execute()
+    ->fetchAllAssoc('domain');
+
+  return array_keys($result);
+}
+
+/**
+ * Adds/Updates a domain to the known domains list.
+ *
+ * @param string $domain
+ * @param bool|null $valid
+ * @return bool
+ */
+function skimlinks_known_domains_update($domain, $valid = NULL) {
+  // Return if the tables haven't been created yet, this can occur before updates have run.
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    return FALSE;
+  }
+
+  // Create a stub domain entry if we don't yet know if it is valid.
+  // - Invalid by default.
+  // - Set last_updated to 0 so that it is checked in the next cron run.
+  if (is_null($valid)) {
+    $valid = FALSE;
+    $last_updated = 0;
+  }
+  else {
+    $last_updated = REQUEST_TIME;
+  }
+
+  db_merge('skimlinks_domains')
+    ->key(array('domain' => $domain))
+    ->fields(array(
+      'domain' => $domain,
+      'last_updated' => $last_updated,
+      'valid' => ($valid === TRUE) ? 1 : 0,
+    ))
+    ->execute();
+
+  // Clear cache so that it will be checked again.
+  $cid = _skimlinks_domain_exists_cid($domain);
+  cache_clear_all($cid, 'cache', TRUE);
+  drupal_static_reset($cid);
+
+  return TRUE;
+}
+
+/**
+ * Cache ID for domain exists.
+ *
+ * @param $domain
+ * @return string
+ */
+function _skimlinks_domain_exists_cid($domain) {
+  return 'skimlinks_domain_exists:' . $domain;
+}
+
+/**
+ * Check if a domain exists in the DB.
+ *
+ * @param $domain
+ * @return mixed
+ */
+function _skimlinks_domain_exists($domain) {
+  $cid = _skimlinks_domain_exists_cid($domain);
+
+  // Return static cache if already looked up.
+  $exists = &drupal_static($cid);
+  if (!is_null($exists)) {
+    return $exists;
+  }
+
+  // Get cached value and statically cache for next lookup.
+  if ($cache = cache_get($cid)) {
+    $exists = $cache->data;
+    return $exists;
+  }
+
+  // Return if the tables haven't been created yet, this can occur before updates have run.
+  if (db_table_exists('skimlinks_domains') == FALSE) {
+    return FALSE;
+  }
+
+  // Not known by default.
+  $exists = FALSE;
+
+  // Lookup value in DB and cache.
+  $query = db_select('skimlinks_domains', 'w');
+  $query->addField('w', 'domain');
+  $query->condition('w.domain', $domain);
+  if ($query->execute()->fetchObject()) {
+    $exists = TRUE;
+  }
+  cache_set($cid, $exists);
+
+  return $exists;
+}
+
+/**
+ * Helper to save the blacklist on the database.
+ *
+ * @param $domains
+ */
+function skimlinks_create_blacklist($domains) {
+  $domains = explode("\n", $domains);
+  $domains = array_map('trim', $domains);
+  $domains = array_filter($domains, 'trim');
+  $domains = array_unique($domains);
+
+  db_truncate('skimlinks_blacklist')->execute();
+  $query = db_insert('skimlinks_blacklist')->fields(array('domain'));
+
+  foreach ($domains as $domain) {
+    $query->values(array('domain' => check_plain($domain)));
+  }
+
+  $query->execute();
+
+  // Clear allowed domain cache.
+  cache_clear_all('skimlinks_domain_allowed:', 'cache', TRUE);
 }

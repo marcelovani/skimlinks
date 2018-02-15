@@ -64,9 +64,11 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->drupalLogin($this->adminUser);
     $this->drupalGet('admin/config/services/skimlinks');
 
+    // Test server side.
     $edit = array(
       'skimlinks_publisherid' => '12345X1234567',
       'skimlinks_subdomain' => 'http://go.redirectingat.com',
+      'skimlinks_environment' => '0',
     );
     $this->drupalPost('admin/config/services/skimlinks', $edit, t('Save configuration'));
     $this->assertRaw(t('The configuration options have been saved'));
@@ -78,14 +80,79 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $value = $this->xpath('//input[@name="skimlinks_subdomain"]/@value')[0];
     $this->assertEqual($value, 'http://go.redirectingat.com');
 
-    $edit = array();
-    $edit['title'] = 'This is a test title';
-    $edit["body[und][0][value]"] = '<a href="http://google.com">Google.com</a>';
-    $this->drupalPost('node/add/page', $edit, t('Save'));
-    $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
+    $value = $this->xpath('//input[@name="skimlinks_environment" and @checked="checked"]/@value')[0];
+    $this->assertEqual($value, '0');
 
     $this->drupalGet('/');
     $this->assertRaw('var skimlinks_domain = "go.redirectingat.com"');
     $this->assertRaw('<script type="text/javascript" src="http://s.skimresources.com/js/12345X1234567.skimlinks.js"></script>');
+
+    // Test server side.
+    $edit = array(
+      'skimlinks_publisherid' => '12345X1234567',
+      'skimlinks_subdomain' => 'http://go.redirectingat.com',
+      'skimlinks_environment' => '1',
+      'skimlinks_link_new_window' => '1',
+      'skimlinks_merchant_api_endpoint' => 'https://private-anon-0c21969285-skimlinksmerchantapi.apiary-mock.com/v3/merchants',
+      'skimlinks_merchant_api_key' => '8ef774f4d56a60530747bd1fbd5cf198',
+      'skimlinks_merchant_api_account_type' => 'publisher_admin',
+      'skimlinks_merchant_api_account_id' => '12345',
+      'skimlinks_domain_blacklist' => "test.com\r\ntest.co.uk",
+    );
+    $this->drupalPost('admin/config/services/skimlinks', $edit, t('Save configuration'));
+    $this->assertRaw(t('The configuration options have been saved'));
+
+    // Test the form values.
+    $value = $this->xpath('//input[@name="skimlinks_publisherid"]/@value')[0];
+    $this->assertEqual($value, '12345X1234567');
+
+    $value = $this->xpath('//input[@name="skimlinks_subdomain"]/@value')[0];
+    $this->assertEqual($value, 'http://go.redirectingat.com');
+
+    $value = $this->xpath('//input[@name="skimlinks_link_new_window"]/@value')[0];
+    $this->assertEqual($value, '1');
+
+    $value = $this->xpath('//input[@name="skimlinks_link_nofollow"]/@value')[0];
+    $this->assertEqual($value, '1');
+
+    $value = $this->xpath('//input[@name="skimlinks_environment" and @checked="checked"]/@value')[0];
+    $this->assertEqual($value, '1');
+
+    $value = $this->xpath('//textarea[@name="skimlinks_domain_blacklist"]/text()')[0];
+    $this->AssertTrue(strpos($value, "test.com") !== FALSE);
+    $this->AssertTrue(strpos($value, "test.co.uk") !== FALSE);
+
+    $this->drupalGet('/');
+    $this->assertNoRaw('var skimlinks_domain');
+    $this->assertNoRaw('http://s.skimresources.com/js/12345X1234567.skimlinks.js');
+
+    global $base_url;
+    $edit = array();
+    $links = array(
+      'external_link' => '<a href="http://jcpenney.com">jcpenney.com</a>',
+      'internal_link_relative' => '<a href="/page1">Page1</a>',
+      'internal_link_absolute' => '<a href="' . $base_url . '/page2">Page2</a>',
+      'external_blacklisted_1' => '<a href="http://test.com">Test.com</a>',
+      'external_blacklisted_2' => '<a href="http://test.co.uk">Test.co.uk</a>',
+    );
+    $edit['title'] = 'This is a test title';
+    $edit["body[und][0][value]"] = implode('<br>', $links);
+    $this->drupalPost('node/add/page', $edit, t('Save'));
+    $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
+
+    // Check that external links are using the wrapper.
+    $this->assertRaw('href="http://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//jcpenney.com&amp;xcust=1&amp;sref=');
+    $this->assertPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/node/1|");
+
+    // Check that internal links are not changed.
+    $this->assertRaw('<a href="/page1">Page1</a>');
+    $this->assertRaw('<a href="' . $base_url . '/page2">Page2</a>');
+    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/page1|");
+    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/page2|");
+
+    // Check that links to blacklisted domains are not affected.
+    $this->assertRaw('<a href="http://test.com">Test.com</a>');
+    $this->assertRaw('<a href="http://test.co.uk">Test.co.uk</a>');
+    $this->assertNoPattern("|<a.*?href=.*?go\.redirectingat\.com.*?url=http%3A//test.com|");
   }
 }
