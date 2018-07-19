@@ -51,14 +51,43 @@ function skimlinks_cron() {
 
   $end = time() + (int) variable_get('skimlinks_cron_process_time', 60);
   $expired_domains = skimlinks_get_expired_domains_query();
-  while (time() < $end && ($item = $expired_domains->fetchObject())) {
+  while (time() < $end && _skimlinks_within_api_rate_limit() && ($item = $expired_domains->fetchObject())) {
     try {
       skimlinks_validate_merchant($item->domain);
     }
     catch (Exception $e) {
-      watchdog_exception('cron', $e->getMessage());
+      watchdog('skimlinks', $e->getMessage());
+      // Stop processing if we have hit the API limit.
+      // Continue processing if the request failed for any other reason.
+      if ($e->getCode() === 406) {
+        break;
+      }
     }
   }
+}
+
+/**
+ * Check that rate limit hasn't been reached.
+ *
+ * @return bool
+ */
+function _skimlinks_within_api_rate_limit() {
+  $time_start = &drupal_static(__FUNCTION__ . '_time_start', time());
+  $lookups = &drupal_static(__FUNCTION__ . '_lookups', 0);
+
+  # Reset lookups each minute.
+  if ((time() - $time_start) >= 60) {
+    $time_start = time();
+    $lookups = 0;
+  }
+
+  # Return FALSE if we have hit the API limit, which is
+  # 40 requests per min per API key.
+  if ($lookups++ >= 40) {
+    return FALSE;
+  }
+
+  return TRUE;
 }
 
 /**
@@ -460,7 +489,12 @@ function _skimlinks_entity_update_known_domains($entity) {
             $domain = _skimlinks_get_host($href);
             // If the domain isn't yet known, look it up straight away.
             if (!empty($domain) && !_skimlinks_domain_exists($domain)) {
-              skimlinks_validate_merchant($domain, 2);
+              try {
+                skimlinks_validate_merchant($domain, 5);
+              }
+              catch (Exception $e) {
+                watchdog('skimlinks', $e->getMessage());
+              }
             }
           }
         }
@@ -494,6 +528,7 @@ function skimlinks_validate_merchant($domain, $timeout = 10) {
  */
 function skimlinks_merchant_api_call($domain, $timeout = 10) {
   $api_endpoint = check_plain(variable_get('skimlinks_merchant_api_endpoint'));
+
   $parameters = array(
     'apikey' => check_plain(variable_get('skimlinks_merchant_api_key')),
     'account_id' => check_plain(variable_get('skimlinks_merchant_api_account_id')),
@@ -507,12 +542,32 @@ function skimlinks_merchant_api_call($domain, $timeout = 10) {
   curl_setopt($ch, CURLOPT_FRESH_CONNECT, TRUE);
   curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
   curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+  curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
   curl_setopt($ch, CURLOPT_URL, "$api_endpoint?$query");
 
-  $result = json_decode(curl_exec($ch));
+  $result = curl_exec($ch);
+  $response_code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+
+  if($result === FALSE) {
+    $error_message = t('!curl_error - Domain: !domain', array(
+      '!curl_error' => curl_error($ch),
+      '!domain' => $domain,
+    ));
+  }
+  elseif ($response_code !== 200) {
+    $error_message = t('!code status code returned checking domain: !domain', array(
+      '!code' => $response_code,
+      '!domain' => $domain,
+    ));
+  }
+
   curl_close($ch);
 
-  return $result;
+  if (!empty($error_message)) {
+    throw new Exception($error_message, $response_code);
+  }
+
+  return json_decode($result);
 }
 
 /**
@@ -638,12 +693,26 @@ function skimlinks_known_domains_update($domain, $valid = NULL) {
     ))
     ->execute();
 
-  // Clear cache so that it will be checked again.
-  $cid = _skimlinks_domain_exists_cid($domain);
-  cache_clear_all($cid, 'cache', TRUE);
-  drupal_static_reset($cid);
+  _skimlinks_clear_domain_cache($domain);
 
   return TRUE;
+}
+
+/**
+ * Clear the cache for the provided domain.
+ *
+ * @param $domain
+ */
+function _skimlinks_clear_domain_cache($domain) {
+  // Clear cache so that it will be checked again.
+  $cids = array(
+    _skimlinks_domain_exists_cid($domain),
+    _skimlinks_domain_allowed_cid($domain),
+  );
+  foreach ($cids as $cid) {
+    cache_clear_all($cid, 'cache', TRUE);
+    drupal_static_reset($cid);
+  }
 }
 
 /**
