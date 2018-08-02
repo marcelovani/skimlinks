@@ -206,17 +206,8 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
     if (!$valid_url) {
       form_set_error('skimlinks_subdomain', t('Your custom redirection sub-domain is not a valid URL. Please include the http:// or https://'));
     }
-
-    // Validate the provided sub domain by comparing the Skimlinks default response with the new subdomain response
-    $standard_url = 'https://go.redirectingat.com/check/domain_check.html';
-    $cnamecheck_url = $subdomain . '/check/domain_check.html';
-    $original = drupal_http_request($standard_url);
-    $new = drupal_http_request($cnamecheck_url);
-
-    if (empty($new->data) || $original->data !== $new->data) {
-      form_set_error('skimlinks_subdomain', t('Your custom redirection sub-domain is not currently pointing at Skimlinks servers.'));
-    }
   }
+
   else {
     form_set_value($form['account']['skimlinks_subdomain'], 'https://go.redirectingat.com', $form_state);
   }
