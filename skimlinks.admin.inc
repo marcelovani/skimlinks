@@ -135,7 +135,7 @@ function skimlinks_admin_settings_form($form_state) {
     '#default_value' => (int) variable_get('skimlinks_domains_update_threshold', 720),
   );
 
-  $form['server_side']['__skimlinks_update_known_domains_on_entity_update'] = array(
+  $form['server_side']['skimlinks_update_known_domains_on_entity_update'] = array(
     '#type' => 'checkbox',
     '#title' => t('Update known domains when content changes'),
     '#description' => t('Tick the box to update the kwnon domains list when content is saved. The list is automatically populated by the Merchant API.'),
