@@ -15,8 +15,7 @@ Configuration
 Go to /admin/config/services/skimlinks
 
 Fill in the form with your Domain Id
-The custom redirect subdomain should start with http/https
-i.e. http://go.redirectingat.com
+The custom redirect subdomain, without http/https i.e. go.redirectingat.com
 
 Choose if you want to use the Client side or Server side implementation.
 
@@ -41,3 +40,11 @@ you save a node or when cron runs.
 
 The blacklist is a global option that will avoid changing any link that points
 to a domain in the list.
+
+Testing
+=======
+How to check the Skimlinks code is installed properly?
+The best way to test whether your Skimlinks installation is working on your
+site is to create a link to http://test.skimlinks.com.
+
+See https://support.skimlinks.com/hc/en-us/articles/223835608-How-to-check-the-Skimlinks-code-is-installed-properly-

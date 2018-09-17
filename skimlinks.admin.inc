@@ -44,7 +44,7 @@ function skimlinks_admin_settings_form($form_state) {
     '#type' => 'textfield',
     '#default_value' => variable_get('skimlinks_subdomain', 'go.redirectingat.com'),
     '#description' => t(
-      'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Please include the http:// or https://. Visit the !settings page for more details.',
+      'You may use a custom subdomain to redirect your affiliate links rather than the default go.redirectingat.com. Do not include http:// or https://. Visit the !settings page for more details.',
       array(
         '!settings' => l(t('Skimlinks Advanced Settings'), 'https://hub.skimlinks.com/setup/settings', array('attributes' => array('target' => ' _blank')))
       )
@@ -191,25 +191,10 @@ function skimlinks_admin_settings_form_validate($form, &$form_state) {
 
   if ($form_state['values']['skimlinks_subdomain']) {
     $subdomain = &$form_state['values']['skimlinks_subdomain'];
-
-    // Trim whitespace
-    $subdomain = trim($subdomain);
-
-    // Check the user has included the URL schema in the subdomain value.
-    $valid_url = FALSE;
-    foreach (array('http://', 'https://') as $protocol) {
-      if (substr($subdomain, 0, strlen($protocol)) === $protocol) {
-        $valid_url = TRUE;
-        break;
-      }
-    }
-    if (!$valid_url) {
-      form_set_error('skimlinks_subdomain', t('Your custom redirection sub-domain is not a valid URL. Please include the http:// or https://'));
-    }
+    $subdomain = _skimlinks_clean_url($subdomain);
   }
-
   else {
-    form_set_value($form['account']['skimlinks_subdomain'], 'https://go.redirectingat.com', $form_state);
+    form_set_value($form['account']['skimlinks_subdomain'], 'go.redirectingat.com', $form_state);
   }
 }
 

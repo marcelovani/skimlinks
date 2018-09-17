@@ -55,6 +55,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
 
     // Enable clean urls.
     variable_set('clean_url', TRUE);
+    variable_set('skimlinks_update_known_domains_on_entity_update', 0);
   }
 
   /**
@@ -67,7 +68,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     // Test server side.
     $edit = array(
       'skimlinks_publisherid' => '12345X1234567',
-      'skimlinks_subdomain' => 'http://go.redirectingat.com',
+      'skimlinks_subdomain' => 'https://go.redirectingat.com',
       'skimlinks_environment' => '0',
     );
     $this->drupalPost('admin/config/services/skimlinks', $edit, t('Save configuration'));
@@ -78,14 +79,14 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertEqual($value, '12345X1234567');
 
     $value = $this->xpath('//input[@name="skimlinks_subdomain"]/@value')[0];
-    $this->assertEqual($value, 'http://go.redirectingat.com');
+    $this->assertEqual($value, 'go.redirectingat.com');
 
     $value = $this->xpath('//input[@name="skimlinks_environment" and @checked="checked"]/@value')[0];
     $this->assertEqual($value, '0');
 
     $this->drupalGet('/');
     $this->assertRaw('var skimlinks_domain = "go.redirectingat.com"');
-    $this->assertRaw('<script type="text/javascript" src="http://s.skimresources.com/js/12345X1234567.skimlinks.js"></script>');
+    $this->assertRaw('<script type="text/javascript" src="//s.skimresources.com/js/12345X1234567.skimlinks.js"></script>');
 
     // Test server side.
     $edit = array(
@@ -93,7 +94,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
       'skimlinks_subdomain' => 'http://go.redirectingat.com',
       'skimlinks_environment' => '1',
       'skimlinks_link_new_window' => '1',
-      'skimlinks_merchant_api_endpoint' => 'https://private-anon-0c21969285-skimlinksmerchantapi.apiary-mock.com/v3/merchants',
+      'skimlinks_merchant_api_endpoint' => 'https://merchants.skimapis.com/v3/merchants',
       'skimlinks_merchant_api_key' => '8ef774f4d56a60530747bd1fbd5cf198',
       'skimlinks_merchant_api_account_type' => 'publisher_admin',
       'skimlinks_merchant_api_account_id' => '12345',
@@ -107,7 +108,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertEqual($value, '12345X1234567');
 
     $value = $this->xpath('//input[@name="skimlinks_subdomain"]/@value')[0];
-    $this->assertEqual($value, 'http://go.redirectingat.com');
+    $this->assertEqual($value, 'go.redirectingat.com');
 
     $value = $this->xpath('//input[@name="skimlinks_link_new_window"]/@value')[0];
     $this->assertEqual($value, '1');
@@ -124,7 +125,10 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
 
     $this->drupalGet('/');
     $this->assertNoRaw('var skimlinks_domain');
-    $this->assertNoRaw('http://s.skimresources.com/js/12345X1234567.skimlinks.js');
+    $this->assertNoRaw('s.skimresources.com/js/12345X1234567.skimlinks.js');
+
+    // Insert a domain into the known domains. This was done to bypass the query to the merchant api endpoint as it needs real api key to work.
+    skimlinks_known_domains_update('jcpenney.com', TRUE);
 
     global $base_url;
     $edit = array();
@@ -141,7 +145,7 @@ class SkimlinksDirectTest extends DrupalWebTestCase {
     $this->assertText(t('@type @title has been created.', array('@type' => 'Basic page', '@title' => $edit['title'])), 'Node was created.');
 
     // Check that external links are using the wrapper.
-    $this->assertRaw('href="http://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//jcpenney.com&amp;xcust=1&amp;sref=');
+    $this->assertRaw('href="https://go.redirectingat.com/?id=12345X1234567&amp;url=http%3A//jcpenney.com&amp;xcust=1&amp;sref=');
     $this->assertPattern("|<a.*?href=.*?go\.redirectingat\.com.*?sref=" . drupal_encode_path($base_url) . "/node/1|");
 
     // Check that internal links are not changed.

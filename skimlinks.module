@@ -121,17 +121,13 @@ function skimlinks_page_alter(&$page) {
   }
 
   if ($domain_id = variable_get('skimlinks_publisherid', FALSE)) {
-
     if ($subdomain = variable_get('skimlinks_subdomain', FALSE)) {
-      // Remove http:// or https://
-      foreach (array('http://', 'https://') as $protocol) {
-        $subdomain = str_replace($protocol, '', $subdomain);
-      }
+      $subdomain = _skimlinks_clean_url($subdomain);
 
       drupal_add_js('var skimlinks_domain = "' . $subdomain . '";', array('type' => 'inline', 'scope' => 'footer', 'group' => JS_DEFAULT));
     }
 
-    drupal_add_js("http://s.skimresources.com/js/{$domain_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
+    drupal_add_js("//s.skimresources.com/js/{$domain_id}.skimlinks.js", array('type' => 'external', 'scope' => 'footer', 'group' => JS_DEFAULT));
   }
 }
 
@@ -327,10 +323,10 @@ function skimlinks_get_redirect_url($path, $node) {
   );
 
   $query = drupal_http_build_query($parameters);
-  $redirect_url = check_url(variable_get('skimlinks_subdomain'));
+  $redirect_url = _skimlinks_clean_url(variable_get('skimlinks_subdomain'));
   $redirect_url = trim($redirect_url, '/') . '/';
 
-  return "$redirect_url?$query";
+  return "https://$redirect_url?$query";
 }
 
 /**
@@ -788,4 +784,21 @@ function skimlinks_create_blacklist($domains) {
 
   // Clear allowed domain cache.
   cache_clear_all('skimlinks_domain_allowed:', 'cache', TRUE);
+}
+
+/**
+ * Removes the protocol from the Url.
+ *
+ * @param $url
+ */
+function _skimlinks_clean_url($url) {
+  // Remove http:// or https:// or //.
+  foreach (array('http://', 'https://', '//') as $protocol) {
+    $url = str_replace($protocol, '', $url);
+  }
+
+  // Trim whitespace
+  $url = trim($url);
+
+  return check_url($url);
 }
